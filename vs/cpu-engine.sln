@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 18
+VisualStudioVersion = 18.1.11304.174 d18.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "cpu-engine", "cpu-engine\cpu-engine.vcxproj", "{99EB8BA1-1D88-4D23-80E7-CCA2F07EA15F}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{99EB8BA1-1D88-4D23-80E7-CCA2F07EA15F}.Debug|x64.ActiveCfg = Debug|x64
+		{99EB8BA1-1D88-4D23-80E7-CCA2F07EA15F}.Debug|x64.Build.0 = Debug|x64
+		{99EB8BA1-1D88-4D23-80E7-CCA2F07EA15F}.Release|x64.ActiveCfg = Release|x64
+		{99EB8BA1-1D88-4D23-80E7-CCA2F07EA15F}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {73DCBD08-F8E9-4C8E-94E4-148514E56ADB}
+	EndGlobalSection
+EndGlobal
