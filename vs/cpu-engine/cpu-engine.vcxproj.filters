@@ -41,6 +41,9 @@
     <ClInclude Include="UI.h">
       <Filter>Engine</Filter>
     </ClInclude>
+    <ClInclude Include="lodepng.h">
+      <Filter>Core</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Thread.cpp">
@@ -66,6 +69,9 @@
     </ClCompile>
     <ClCompile Include="UI.cpp">
       <Filter>Engine</Filter>
+    </ClCompile>
+    <ClCompile Include="lodepng.cpp">
+      <Filter>Core</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

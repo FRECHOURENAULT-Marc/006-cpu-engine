@@ -549,25 +549,20 @@ void Engine::Update_Purge()
 		ENTITY* pEntity = m_deadEntities[i];
 		if ( pEntity->index==-1 )
 		{
-			delete pEntity;
-			m_deadEntities[i] = nullptr;
+			DELPTR(m_deadEntities[i]);
 			continue;
 		}
-
 		if ( pEntity->index<m_entityCount-1 )
 		{
 			m_entities[pEntity->index] = m_entities[m_entityCount-1];
 			m_entities[pEntity->index]->index = pEntity->index;
 		}
-
 		if ( pEntity->sortedIndex<m_entityCount-1 )
 		{
 			m_sortedEntities[pEntity->sortedIndex] = m_sortedEntities[m_entityCount-1];
 			m_sortedEntities[pEntity->sortedIndex]->sortedIndex = pEntity->sortedIndex;
 		}
-
-		delete pEntity;
-		m_deadEntities[i] = nullptr;
+		DELPTR(m_deadEntities[i]);
 		m_entityCount--;
 	}
 	m_deadEntityCount = 0;
@@ -578,24 +573,19 @@ void Engine::Update_Purge()
 		ENTITY* pEntity = m_bornEntities[i];
 		if ( pEntity->dead )
 		{
-			delete pEntity;
-			m_bornEntities[i] = nullptr;
+			DELPTR(m_bornEntities[i]);
 			continue;
 		}
-
 		pEntity->index = m_entityCount;
 		pEntity->sortedIndex = pEntity->index;
-
 		if ( pEntity->index<m_entities.size() )
 			m_entities[pEntity->index] = pEntity;
 		else
 			m_entities.push_back(pEntity);
-
 		if ( pEntity->sortedIndex<m_sortedEntities.size() )
 			m_sortedEntities[pEntity->sortedIndex] = pEntity;
 		else
 			m_sortedEntities.push_back(pEntity);
-
 		m_entityCount++;
 	}
 	m_bornEntityCount = 0;
@@ -606,25 +596,20 @@ void Engine::Update_Purge()
 		SPRITE* pSprite = m_deadSprites[i];
 		if ( pSprite->index==-1 )
 		{
-			delete pSprite;
-			m_deadSprites[i] = nullptr;
+			DELPTR(m_deadSprites[i]);
 			continue;
 		}
-
 		if ( pSprite->index<m_spriteCount-1 )
 		{
 			m_sprites[pSprite->index] = m_sprites[m_spriteCount-1];
 			m_sprites[pSprite->index]->index = pSprite->index;
 		}
-
 		if ( pSprite->sortedIndex<m_spriteCount-1 )
 		{
 			m_sortedSprites[pSprite->sortedIndex] = m_sortedSprites[m_spriteCount-1];
 			m_sortedSprites[pSprite->sortedIndex]->sortedIndex = pSprite->sortedIndex;
 		}
-
-		delete pSprite;
-		m_deadSprites[i] = nullptr;
+		DELPTR(m_deadSprites[i]);
 		m_spriteCount--;
 	}
 	m_deadSpriteCount = 0;
@@ -635,24 +620,19 @@ void Engine::Update_Purge()
 		SPRITE* pSprite = m_bornSprites[i];
 		if ( pSprite->dead )
 		{
-			delete pSprite;
-			m_bornSprites[i] = nullptr;
+			DELPTR(m_bornSprites[i]);
 			continue;
 		}
-
 		pSprite->index = m_spriteCount;
 		pSprite->sortedIndex = pSprite->index;
-
 		if ( pSprite->index<m_sprites.size() )
 			m_sprites[pSprite->index] = pSprite;
 		else
 			m_sprites.push_back(pSprite);
-
 		if ( pSprite->sortedIndex<m_sortedSprites.size() )
 			m_sortedSprites[pSprite->sortedIndex] = pSprite;
 		else
 			m_sortedSprites.push_back(pSprite);
-
 		m_spriteCount++;
 	}
 	m_bornSpriteCount = 0;
@@ -1240,18 +1220,17 @@ bool Engine::Copy(byte* dst, int dstW, int dstH, int dstX, int dstY, const uint8
 			const uint8_t sa = s[3];
 			if ( sa==255 )
 			{
-				d[0] = s[0];
+				d[0] = s[2];
 				d[1] = s[1];
-				d[2] = s[2];
+				d[2] = s[0];
 			}
 			else if ( sa!=0 )
 			{
 				const byte a = sa;
 				const byte ia = 255 - a;
-				d[0] = (byte)((s[0] * a + d[0] * ia + 127) / 255);
+				d[0] = (byte)((s[2] * a + d[0] * ia + 127) / 255);
 				d[1] = (byte)((s[1] * a + d[1] * ia + 127) / 255);
-				d[2] = (byte)((s[2] * a + d[2] * ia + 127) / 255);
-				// d[3] inchangé, ou composité si tu veux
+				d[2] = (byte)((s[0] * a + d[2] * ia + 127) / 255);
 			}
 			d += 4;
 			s += 4;

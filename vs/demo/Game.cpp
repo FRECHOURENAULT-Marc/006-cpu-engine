@@ -18,11 +18,12 @@ void Game::OnStart()
 {
 	// YOUR CODE HERE
 
-	m_texture.Load("test.bmp");
+	m_texture.Load("bird.png");
 	m_pSprite = CreateSprite();
 	m_pSprite->pTexture = &m_texture;
-	m_pSprite->x = 10;
-	m_pSprite->y = 10;
+	m_pSprite->CenterAnchor();
+	m_pSprite->x = 100;
+	m_pSprite->y = 100;
 
 	CreateSpaceship(m_meshShip);
 	CreateCube(m_meshCube);
@@ -43,6 +44,9 @@ void Game::OnStart()
 void Game::OnUpdate()
 {
 	// YOUR CODE HERE
+
+	// Bouge le sprite
+	m_pSprite->y = 100 + (int)(sinf(m_time)*50.0f);
 
 	// Tourne sur XYZ
 	m_pShip->transform.AddYPR(m_dt, m_dt, m_dt);

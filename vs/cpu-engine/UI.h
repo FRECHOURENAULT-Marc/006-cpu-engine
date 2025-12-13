@@ -24,9 +24,12 @@ struct SPRITE
 	int x;
 	int y;
 	int z;
+	int anchorX;
+	int anchorY;
 	int index;
 	int sortedIndex;
 	bool dead;
 
 	SPRITE();
+	void CenterAnchor();
 };

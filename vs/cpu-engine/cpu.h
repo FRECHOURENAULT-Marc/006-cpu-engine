@@ -56,7 +56,12 @@ struct PIXELSHADER;
 class Engine;
 
 // Types
+using i16								= __int16;
+using ui16								= unsigned __int16;
+using i32								= __int32;
 using ui32								= unsigned __int32;
+using i64								= __int64;
+using ui64								= unsigned __int64;
 using PS_FUNC							= bool(*)(XMFLOAT3& out, const PIXELSHADER& in, const void* data);
 
 // Macro
@@ -69,6 +74,7 @@ using PS_FUNC							= bool(*)(XMFLOAT3& out, const PIXELSHADER& in, const void* 
 #define LAMBERT							2
 
 // Core
+#include "lodepng.h"
 #include "Keyboard.h"
 #include "Thread.h"
 
