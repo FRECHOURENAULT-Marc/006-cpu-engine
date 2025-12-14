@@ -934,7 +934,7 @@ void Engine::DrawEntity(ENTITY* pEntity, TILE& tile)
 	DRAWCALL dc;
 	bool safe;
 	XMFLOAT3 screen[3];
-	VERTEXSHADER out[3];
+	VS out[3];
 
 	for ( const TRIANGLE& triangle : pEntity->pMesh->triangles )
 	{
@@ -1054,7 +1054,8 @@ void Engine::FillTriangle(DRAWCALL& dc)
 	const float dE31dx = a31;
 	const float dE31dy = b31;
 
-	const PS_FUNC ps = dc.pMaterial->ps ? dc.pMaterial->ps : &PixelShader;
+	const PS_FUNC func = dc.pMaterial->ps ? dc.pMaterial->ps : &PixelShader;
+	PS_DATA data;
 	for ( int y=minY ; y<maxY ; ++y )
 	{
 		float e12 = e12_row;
@@ -1097,58 +1098,59 @@ void Engine::FillTriangle(DRAWCALL& dc)
 			}
 
 			// Input
-			PIXELSHADER in;
-			in.x = x;
-			in.y = y;
-			in.depth = z;
+			data.in.x = x;
+			data.in.y = y;
+			data.in.depth = z;
 
 			// Position (lerp)
-			in.pos.x = dc.vso[2].worldPos.x + (dc.vso[0].worldPos.x - dc.vso[2].worldPos.x) * w1 + (dc.vso[1].worldPos.x - dc.vso[2].worldPos.x) * w2;
-			in.pos.y = dc.vso[2].worldPos.y + (dc.vso[0].worldPos.y - dc.vso[2].worldPos.y) * w1 + (dc.vso[1].worldPos.y - dc.vso[2].worldPos.y) * w2;
-			in.pos.z = dc.vso[2].worldPos.z + (dc.vso[0].worldPos.z - dc.vso[2].worldPos.z) * w1 + (dc.vso[1].worldPos.z - dc.vso[2].worldPos.z) * w2;
+			data.in.pos.x = dc.vso[2].worldPos.x + (dc.vso[0].worldPos.x - dc.vso[2].worldPos.x) * w1 + (dc.vso[1].worldPos.x - dc.vso[2].worldPos.x) * w2;
+			data.in.pos.y = dc.vso[2].worldPos.y + (dc.vso[0].worldPos.y - dc.vso[2].worldPos.y) * w1 + (dc.vso[1].worldPos.y - dc.vso[2].worldPos.y) * w2;
+			data.in.pos.z = dc.vso[2].worldPos.z + (dc.vso[0].worldPos.z - dc.vso[2].worldPos.z) * w1 + (dc.vso[1].worldPos.z - dc.vso[2].worldPos.z) * w2;
 
 			// Normal (lerp)
-			in.normal.x = dc.vso[2].worldNormal.x + (dc.vso[0].worldNormal.x - dc.vso[2].worldNormal.x) * w1 + (dc.vso[1].worldNormal.x - dc.vso[2].worldNormal.x) * w2;
-			in.normal.y = dc.vso[2].worldNormal.y + (dc.vso[0].worldNormal.y - dc.vso[2].worldNormal.y) * w1 + (dc.vso[1].worldNormal.y - dc.vso[2].worldNormal.y) * w2;
-			in.normal.z = dc.vso[2].worldNormal.z + (dc.vso[0].worldNormal.z - dc.vso[2].worldNormal.z) * w1 + (dc.vso[1].worldNormal.z - dc.vso[2].worldNormal.z) * w2;
+			data.in.normal.x = dc.vso[2].worldNormal.x + (dc.vso[0].worldNormal.x - dc.vso[2].worldNormal.x) * w1 + (dc.vso[1].worldNormal.x - dc.vso[2].worldNormal.x) * w2;
+			data.in.normal.y = dc.vso[2].worldNormal.y + (dc.vso[0].worldNormal.y - dc.vso[2].worldNormal.y) * w1 + (dc.vso[1].worldNormal.y - dc.vso[2].worldNormal.y) * w2;
+			data.in.normal.z = dc.vso[2].worldNormal.z + (dc.vso[0].worldNormal.z - dc.vso[2].worldNormal.z) * w1 + (dc.vso[1].worldNormal.z - dc.vso[2].worldNormal.z) * w2;
 
 			// Color (lerp)
-			in.albedo.x = dc.vso[2].albedo.x + (dc.vso[0].albedo.x - dc.vso[2].albedo.x) * w1 + (dc.vso[1].albedo.x - dc.vso[2].albedo.x) * w2;
-			in.albedo.y = dc.vso[2].albedo.y + (dc.vso[0].albedo.y - dc.vso[2].albedo.y) * w1 + (dc.vso[1].albedo.y - dc.vso[2].albedo.y) * w2;
-			in.albedo.z = dc.vso[2].albedo.z + (dc.vso[0].albedo.z - dc.vso[2].albedo.z) * w1 + (dc.vso[1].albedo.z - dc.vso[2].albedo.z) * w2;
+			data.in.albedo.x = dc.vso[2].albedo.x + (dc.vso[0].albedo.x - dc.vso[2].albedo.x) * w1 + (dc.vso[1].albedo.x - dc.vso[2].albedo.x) * w2;
+			data.in.albedo.y = dc.vso[2].albedo.y + (dc.vso[0].albedo.y - dc.vso[2].albedo.y) * w1 + (dc.vso[1].albedo.y - dc.vso[2].albedo.y) * w2;
+			data.in.albedo.z = dc.vso[2].albedo.z + (dc.vso[0].albedo.z - dc.vso[2].albedo.z) * w1 + (dc.vso[1].albedo.z - dc.vso[2].albedo.z) * w2;
 
 			// Lighting
 			if ( dc.pMaterial->lighting==GOURAUD )
 			{
 				float intensity = dc.vso[2].intensity + (dc.vso[0].intensity - dc.vso[2].intensity) * w1 + (dc.vso[1].intensity - dc.vso[2].intensity) * w2;
-				in.color.x = in.albedo.x * intensity;
-				in.color.y = in.albedo.y * intensity;
-				in.color.z = in.albedo.z * intensity;
+				data.in.color.x = data.in.albedo.x * intensity;
+				data.in.color.y = data.in.albedo.y * intensity;
+				data.in.color.z = data.in.albedo.z * intensity;
 			}
 			else if ( dc.pMaterial->lighting==LAMBERT )
 			{
-				XMVECTOR n = XMLoadFloat3(&in.normal);				
+				XMVECTOR n = XMLoadFloat3(&data.in.normal);				
 				//n = XMVector3Normalize(n); // Expensive (better results)
 				XMVECTOR l = XMLoadFloat3(&Engine::Instance()->m_lightDir);
 				float ndotl = XMVectorGetX(XMVector3Dot(n, l));
 				if ( ndotl<0.0f )
 					ndotl = 0.0f;
 				float intensity = ndotl + Engine::Instance()->m_ambient;
-				in.color.x = in.albedo.x * intensity;
-				in.color.y = in.albedo.y * intensity;
-				in.color.z = in.albedo.z * intensity;
+				data.in.color.x = data.in.albedo.x * intensity;
+				data.in.color.y = data.in.albedo.y * intensity;
+				data.in.color.z = data.in.albedo.z * intensity;
 			}
 			else
-				in.color = in.albedo;
+				data.in.color = data.in.albedo;
 
 			// Output
-			XMFLOAT3 out;
-			bool discard = ps(out, in, dc.pMaterial->data);
-			if ( discard==false )
+			data.values = dc.pMaterial->values;
+			data.out = {};
+			data.discard = false;
+			func(data);
+			if ( data.discard==false )
 			{
 				if ( dc.depth & DEPTH_WRITE )
 					m_depthBuffer[index] = z;
-				m_colorBuffer[index] = ToBGR(out);
+				m_colorBuffer[index] = ToBGR(data.out);
 			}
 
 			e12 += dE12dx;
@@ -1214,10 +1216,9 @@ bool Engine::Copy(byte* dst, int dstW, int dstH, int dstX, int dstY, const uint8
 	return true;
 }
 
-bool Engine::PixelShader(XMFLOAT3& out, const PIXELSHADER& in, const void* data)
+void Engine::PixelShader(PS_DATA& data)
 {
-	out = in.color;
-	return false;
+	data.out = data.in.color;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

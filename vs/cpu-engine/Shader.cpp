@@ -7,5 +7,5 @@ MATERIAL::MATERIAL()
 	//lighting = LAMBERT;
 	ps = nullptr;
 	color = { 1.0f, 1.0f, 1.0f };
-	data = nullptr;
+	values = nullptr;
 }

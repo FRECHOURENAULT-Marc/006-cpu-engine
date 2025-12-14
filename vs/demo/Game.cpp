@@ -18,28 +18,31 @@ void Game::OnStart()
 {
 	// YOUR CODE HERE
 
+	// Resources
 	m_font.Create(18);
 	m_texture.Load("bird.png");
+	m_meshShip.CreateSpaceship();
+	m_meshCube.CreateCube();
+
+	// UI
 	m_pSprite = CreateSprite();
 	m_pSprite->pTexture = &m_texture;
 	m_pSprite->CenterAnchor();
 	m_pSprite->x = 100;
 	m_pSprite->y = 100;
 
-	m_meshShip.CreateSpaceship();
-	m_meshCube.CreateCube();
-
+	// Shader
 	m_materialShip.color = ToColor(255, 128, 0);
+	m_materialMissile.ps = MyPixelShader;
 
-	m_missileSpeed = 10.0f;
-
+	// 3D
+	m_camera.transform.pos.z = -5.0f;
 	m_pShip = CreateEntity();
 	m_pShip->pMesh = &m_meshShip;
 	m_pShip->transform.pos.z = 5.0f;
 	m_pShip->transform.pos.y = -3.0f;
 	m_pShip->pMaterial = &m_materialShip;
-
-	m_camera.transform.pos.z = -5.0f;
+	m_missileSpeed = 10.0f;
 }
 
 void Game::OnUpdate()
@@ -93,6 +96,7 @@ void Game::OnUpdate()
 		pMissile->transform.SetScaling(0.2f);
 		pMissile->transform.pos = ray.pos;
 		pMissile->transform.LookTo(ray.dir);
+		pMissile->pMaterial = &m_materialMissile;
 		m_missiles.push_back(pMissile);
 	}
 }
@@ -122,4 +126,10 @@ void Game::OnPostRender()
 	info += std::to_string(m_statsTileCount) + " tiles ";
 	info += "(FIRE: space or left button)";
 	DrawText(&m_font, info.c_str(), 10, 10);
+}
+
+void Game::MyPixelShader(PS_DATA& data)
+{
+	// garder seulement le rouge du pixel éclairé
+	data.out.x = data.in.color.x;
 }

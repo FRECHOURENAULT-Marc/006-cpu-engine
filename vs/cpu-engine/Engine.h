@@ -61,7 +61,7 @@ private:
 	void DrawEntity(ENTITY* pEntity, TILE& tile);
 	void FillTriangle(DRAWCALL& dc);
 	bool Copy(byte* dst, int dstW, int dstH, int dstX, int dstY, const uint8_t* src, int srcW, int srcH, int srcX, int srcY, int w, int h);
-	static bool PixelShader(XMFLOAT3& out, const PIXELSHADER& in, const void* data);
+	static void PixelShader(PS_DATA& data);
 
 	void Present();
 
