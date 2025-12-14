@@ -304,9 +304,9 @@ void MESH::CalculateBox()
 		}
 	}
 
-	float fx = std::max(std::abs(aabb.min.x), std::abs(aabb.max.x));
-	float fy = std::max(std::abs(aabb.min.y), std::abs(aabb.max.y));
-	float fz = std::max(std::abs(aabb.min.z), std::abs(aabb.max.z));
+	float fx = std::max(fabsf(aabb.min.x), fabsf(aabb.max.x));
+	float fy = std::max(fabsf(aabb.min.y), fabsf(aabb.max.y));
+	float fz = std::max(fabsf(aabb.min.z), fabsf(aabb.max.z));
 	float r2 = fx*fx + fy*fy + fz*fz;
 	radius = std::sqrt(r2);
 }

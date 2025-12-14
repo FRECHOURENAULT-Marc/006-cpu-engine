@@ -465,13 +465,13 @@ void Engine::DrawLine(int x0, int y0, float z0, int x1, int y1, float z1, XMFLOA
 {
 	ui32 bgr = ToBGR(color);
 
-	int dx = std::abs(x1 - x0);
+	int dx = abs(x1 - x0);
 	int sx = x0 < x1 ? 1 : -1;
-	int dy = -std::abs(y1 - y0);
+	int dy = -abs(y1 - y0);
 	int sy = y0 < y1 ? 1 : -1;
 	int err = dx + dy;
 
-	float dist = (float)std::max(dx, std::abs(dy));
+	float dist = (float)std::max(dx, abs(dy));
 	if ( dist==0.0f )
 		return;
 
@@ -909,7 +909,7 @@ void Engine::ClearSky()
 	uint32_t colRight = rightSideIsSky ? sCol : gCol;
 
 	std::fill(m_depthBuffer.begin(), m_depthBuffer.end(), 1.0f);
-	if ( std::abs(a)<0.000001f )
+	if ( fabsf(a)<0.000001f )
 	{
 		for ( int y=0 ; y<m_renderHeight ; y++ )
 		{
@@ -937,6 +937,63 @@ void Engine::ClearSky()
 				std::fill(rowPtr, rowPtr + splitX, colLeft);
 			if ( splitX<m_renderWidth )
 				std::fill(rowPtr + splitX, rowPtr + m_renderWidth, colRight);
+		}
+	}
+
+	// Sky Line
+	////////////
+
+	float bandPx = 60.0f;
+	if ( bandPx<=0.5f )
+		return;
+
+	float grad = sqrtf(a*a + b*b);
+	if ( grad<1e-8f )
+		return;
+
+	const float invGrad = 1.0f / grad;
+	const float invBand = 1.0f / bandPx;
+	const float limit   = bandPx * grad;
+
+	if ( fabsf(a)<1e-6f )
+	{
+		for ( int y=0 ; y<m_renderHeight ; ++y )
+		{
+			float distPx = (b * (float)y + c) * invGrad;
+			if ( fabsf(distPx)>bandPx )
+				continue;
+			float t = Clamp(0.5f + distPx * invBand);
+			t = t * t * (3.0f - 2.0f * t); // optional
+			uint32_t col = LerpBGR(gCol, sCol, t);
+			uint32_t* row = m_colorBuffer.data() + y * m_renderWidth;
+			std::fill(row, row + m_renderWidth, col);
+		}
+		return;
+	}
+
+	for ( int y=0 ; y<m_renderHeight ; ++y )
+	{
+		uint32_t* row = m_colorBuffer.data() + y * m_renderWidth;
+		float byc = b * (float)y + c;
+		float xA = (-limit - byc) / a;
+		float xB = ( +limit - byc) / a;
+		float xMinF = (xA < xB) ? xA : xB;
+		float xMaxF = (xA > xB) ? xA : xB;
+		int x0 = FloorToInt(xMinF);
+		int x1 = CeilToInt(xMaxF);
+		if ( x1<0 || x0>=m_renderWidth ) continue;
+		if ( x0<0 ) x0 = 0;
+		if ( x1>=m_renderWidth) x1 = m_renderWidth - 1;
+		float val = byc + a * (float)x0;
+		uint32_t* p = row + x0;
+		uint32_t* e = row + x1 + 1;
+		while ( p!=e )
+		{
+			float distPx = val * invGrad;
+			float t = Clamp(0.5f + distPx * invBand);
+			t = t * t * (3.0f - 2.0f * t); // optional
+			*p++ = LerpBGR(gCol, sCol, t);
+			val += a;
 		}
 	}
 }
@@ -1063,7 +1120,7 @@ void Engine::FillTriangle(DRAWCALL& dc)
 	float b31 = x1 - x3;
 	float c31 = x3 * y1 - x1 * y3;
 	float area = a12 * x3 + b12 * y3 + c12;
-	if ( std::abs(area)<1e-6f )
+	if ( fabsf(area)<1e-6f )
 		return;
 
 	float invArea = 1.0f / area;

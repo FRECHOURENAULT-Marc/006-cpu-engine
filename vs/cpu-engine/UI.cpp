@@ -15,15 +15,10 @@ bool TEXTURE::Load(const char* path)
 {
 	Close();
 
-	FILE* file;
-	if ( fopen_s(&file, path, "rb") )
+	int filesize;
+	byte* data = LoadFile(path, filesize);
+	if ( data==nullptr )
 		return false;
-	fseek(file, 0, SEEK_END);
-	int filesize = ftell(file);
-	fseek(file, 0, SEEK_SET);
-	byte* data = new byte[filesize];
-	fread(data, 1, filesize, file);
-	fclose(file);
 
 	lodepng::State state;
 	ui32 pngWidth, pngHeight;
