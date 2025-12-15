@@ -1,5 +1,11 @@
 #pragma once
 
+// Author
+///////////
+
+// Sylvain Seccia
+// https://www.seccia.com
+
 // Libraries
 ///////////////
 

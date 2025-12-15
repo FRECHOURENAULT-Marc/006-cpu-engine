@@ -54,12 +54,12 @@ void cpu_engine::Initialize(HINSTANCE hInstance, int renderWidth, int renderHeig
 	WNDCLASS wc = { 0 };
 	wc.lpfnWndProc = WindowProc;
 	wc.hInstance = hInstance;
-	wc.lpszClassName = "CPU-ENGINE";
+	wc.lpszClassName = "cpu-engine";
 	wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
 	RegisterClass(&wc);
 	RECT rect = { 0, 0, m_windowWidth, m_windowHeight };
 	AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, FALSE);
-	m_hWnd = CreateWindow("CPU-ENGINE", "CPU ENGINE", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, 0, rect.right-rect.left, rect.bottom-rect.top, nullptr, nullptr, hInstance, nullptr);
+	m_hWnd = CreateWindow("cpu-engine", "cpu-engine", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, 0, rect.right-rect.left, rect.bottom-rect.top, nullptr, nullptr, hInstance, nullptr);
 	SetWindowLongPtr(m_hWnd, GWLP_USERDATA, (LONG_PTR)this);
 
 	// Buffer
