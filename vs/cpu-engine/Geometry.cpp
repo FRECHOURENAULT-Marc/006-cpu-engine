@@ -1,11 +1,11 @@
 #include "stdafx.h"
 
-VERTEX::VERTEX()
+cpu_vertex::cpu_vertex()
 {
 	Identity();
 }
 
-void VERTEX::Identity()
+void cpu_vertex::Identity()
 {
 	pos = ZERO;
 	color = WHITE;
@@ -16,12 +16,12 @@ void VERTEX::Identity()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-TRIANGLE::TRIANGLE()
+cpu_triangle::cpu_triangle()
 {
 	Identity();
 }
 
-void TRIANGLE::Identity()
+void cpu_triangle::Identity()
 {
 	v[0].Identity();
 	v[1].Identity();
@@ -32,12 +32,12 @@ void TRIANGLE::Identity()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-RECTANGLE::RECTANGLE()
+cpu_rectangle::cpu_rectangle()
 {
 	Zero();
 }
 
-void RECTANGLE::Zero()
+void cpu_rectangle::Zero()
 {
 	min = { 0.0f, 0.0f };
 	max = { 0.0f, 0.0f };
@@ -47,12 +47,12 @@ void RECTANGLE::Zero()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-AABB::AABB()
+cpu_aabb::cpu_aabb()
 {
 	Zero();
 }
 
-AABB& AABB::operator=(const OBB& obb)
+cpu_aabb& cpu_aabb::operator=(const cpu_obb& obb)
 {
 	min = {  FLT_MAX,  FLT_MAX,  FLT_MAX };
 	max = { -FLT_MAX, -FLT_MAX, -FLT_MAX };
@@ -78,13 +78,13 @@ AABB& AABB::operator=(const OBB& obb)
 	return *this;
 }
 
-void AABB::Zero()
+void cpu_aabb::Zero()
 {
 	min = { 0.0f, 0.0f, 0.0f };
 	max = { 0.0f, 0.0f, 0.0f };
 }
 
-bool XM_CALLCONV AABB::ToScreen(RECTANGLE& out, FXMMATRIX wvp, float renderWidth, float renderHeight)
+bool XM_CALLCONV cpu_aabb::ToScreen(cpu_rectangle& out, FXMMATRIX wvp, float renderWidth, float renderHeight)
 {
 	const float renderX = 0.0f;
 	const float renderY = 0.0f;
@@ -148,12 +148,12 @@ bool XM_CALLCONV AABB::ToScreen(RECTANGLE& out, FXMMATRIX wvp, float renderWidth
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-OBB::OBB()
+cpu_obb::cpu_obb()
 {
 	Zero();
 }
 
-OBB& OBB::operator=(const AABB& aabb)
+cpu_obb& cpu_obb::operator=(const cpu_aabb& aabb)
 {
 	// Bas (zmin) puis Haut (zmax), en tournant sur x/y
 	const float xmin = aabb.min.x, ymin = aabb.min.y, zmin = aabb.min.z;
@@ -169,13 +169,13 @@ OBB& OBB::operator=(const AABB& aabb)
 	return *this;
 }
 
-void OBB::Zero()
+void cpu_obb::Zero()
 {
 	for ( int i=0 ; i<8 ; i++ )
 		pts[i] = { 0.0f, 0.0f, 0.0f };
 }
 
-void XM_CALLCONV OBB::Transform(FXMMATRIX m)
+void XM_CALLCONV cpu_obb::Transform(FXMMATRIX m)
 {
 	for ( int i=0 ; i<8 ; ++i )
 	{
@@ -189,12 +189,12 @@ void XM_CALLCONV OBB::Transform(FXMMATRIX m)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-RAY::RAY()
+cpu_ray::cpu_ray()
 {
 	Identity();
 }
 
-void RAY::Identity()
+void cpu_ray::Identity()
 {
 	pos = { 0.0f, 0.0f, 0.0f };
 	dir = { 0.0f, 0.0f, 1.0f };
@@ -204,21 +204,21 @@ void RAY::Identity()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-MESH::MESH()
+cpu_mesh::cpu_mesh()
 {
 	Clear();
 }
 
-void MESH::Clear()
+void cpu_mesh::Clear()
 {
 	triangles.clear();
 	radius = 0.0f;
 	aabb.Zero();
 }
 
-void MESH::AddTriangle(XMFLOAT3& a, XMFLOAT3& b, XMFLOAT3& c, XMFLOAT3& color)
+void cpu_mesh::AddTriangle(XMFLOAT3& a, XMFLOAT3& b, XMFLOAT3& c, XMFLOAT3& color)
 {
-	TRIANGLE t;
+	cpu_triangle t;
 	t.v[0].pos = a;
 	t.v[0].color = color;
 	t.v[1].pos = b;
@@ -228,22 +228,22 @@ void MESH::AddTriangle(XMFLOAT3& a, XMFLOAT3& b, XMFLOAT3& c, XMFLOAT3& color)
 	triangles.push_back(t);
 }
 
-void MESH::AddFace(XMFLOAT3& a, XMFLOAT3& b, XMFLOAT3& c, XMFLOAT3& d, XMFLOAT3& color)
+void cpu_mesh::AddFace(XMFLOAT3& a, XMFLOAT3& b, XMFLOAT3& c, XMFLOAT3& d, XMFLOAT3& color)
 {
 	AddTriangle(a, b, c, color);
 	AddTriangle(a, c, d, color);
 }
 
-void MESH::Optimize()
+void cpu_mesh::Optimize()
 {
 	CalculateNormals();
 	CalculateBox();
 }
 
-void MESH::CalculateNormals()
+void cpu_mesh::CalculateNormals()
 {
 	std::map<XMFLOAT3, XMVECTOR, VEC3_CMP> normalAccumulator;
-	for ( TRIANGLE& t : triangles )
+	for ( cpu_triangle& t : triangles )
 	{
 		XMVECTOR p0 = XMLoadFloat3(&t.v[0].pos);
 		XMVECTOR p1 = XMLoadFloat3(&t.v[1].pos);
@@ -264,7 +264,7 @@ void MESH::CalculateNormals()
 		normalAccumulator[t.v[1].pos] = XMVectorAdd(normalAccumulator[t.v[1].pos], faceNormal);
 		normalAccumulator[t.v[2].pos] = XMVectorAdd(normalAccumulator[t.v[2].pos], faceNormal);
 	}
-	for ( TRIANGLE& t : triangles )
+	for ( cpu_triangle& t : triangles )
 	{
 		for ( int i=0 ; i<3 ; i++ )
 		{
@@ -275,7 +275,7 @@ void MESH::CalculateNormals()
 	}
 }
 
-void MESH::CalculateBox()
+void cpu_mesh::CalculateBox()
 {
 	aabb.min.x = FLT_MAX;
 	aabb.min.y = FLT_MAX;
@@ -284,7 +284,7 @@ void MESH::CalculateBox()
 	aabb.max.y = -FLT_MAX;
 	aabb.max.z = -FLT_MAX;
 
-	for ( TRIANGLE& t : triangles )
+	for ( cpu_triangle& t : triangles )
 	{
 		for ( int i=0 ; i<3 ; i++ )
 		{
@@ -311,7 +311,7 @@ void MESH::CalculateBox()
 	radius = std::sqrt(r2);
 }
 
-void MESH::CreateCube(float halfSize, XMFLOAT3 color)
+void cpu_mesh::CreateCube(float halfSize, XMFLOAT3 color)
 {
 	Clear();
 	const float s = halfSize; 
@@ -332,7 +332,7 @@ void MESH::CreateCube(float halfSize, XMFLOAT3 color)
 	Optimize();
 }
 
-void MESH::CreateCircle(float radius, int count, XMFLOAT3 color)
+void cpu_mesh::CreateCircle(float radius, int count, XMFLOAT3 color)
 {
 	if ( count<3 )
 		return;
@@ -358,7 +358,7 @@ void MESH::CreateCircle(float radius, int count, XMFLOAT3 color)
 	Optimize();
 }
 
-void MESH::CreateSphere(float radius, int stacks, int slices, XMFLOAT3 color1, XMFLOAT3 color2)
+void cpu_mesh::CreateSphere(float radius, int stacks, int slices, XMFLOAT3 color1, XMFLOAT3 color2)
 {
 	Clear();
 	if ( stacks<2 ) stacks = 2; // minimum pour avoir un haut et un bas
@@ -419,7 +419,7 @@ void MESH::CreateSphere(float radius, int stacks, int slices, XMFLOAT3 color1, X
 	Optimize();
 }
 
-void MESH::CreateSpaceship()
+void cpu_mesh::CreateSpaceship()
 {
 	Clear();
 	const float width = 2.0f;

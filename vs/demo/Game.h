@@ -1,6 +1,6 @@
 #pragma once
 
-class Game : public Engine
+class Game : public cpu_engine
 {
 public:
 	Game();
@@ -17,29 +17,29 @@ public:
 	void OnPreRender() override;
 	void OnPostRender() override;
 
-	static void MyPixelShader(PS_IO& io);
+	static void MyPixelShader(cpu_ps_io& io);
 
 private:
 
 	// Resources
-	FONT m_font;
-	MESH m_meshShip;
-	MESH m_meshMissile;
-	MESH m_meshSphere;
-	TEXTURE m_texture;
+	cpu_font m_font;
+	cpu_mesh m_meshShip;
+	cpu_mesh m_meshMissile;
+	cpu_mesh m_meshSphere;
+	cpu_texture m_texture;
 
 	// UI
-	SPRITE* m_pSprite;
+	cpu_sprite* m_pSprite;
 
 	// Shader
-	MATERIAL m_materialShip;
-	MATERIAL m_materialMissile;
+	cpu_material m_materialShip;
+	cpu_material m_materialMissile;
 
 	// 3D
-	ENTITY* m_pShip;
-	std::list<ENTITY*> m_missiles;
+	cpu_entity* m_pShip;
+	std::list<cpu_entity*> m_missiles;
 	float m_missileSpeed;
-	ENTITY* m_pBall;
+	cpu_entity* m_pBall;
 
 	// Gameplay
 	cpu_fsm<Game>* m_pFSM;

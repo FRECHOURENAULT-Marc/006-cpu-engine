@@ -41,7 +41,7 @@ inline XMVECTOR XMRIGHT					= g_XMIdentityR0;
 inline XMVECTOR XMUP					= g_XMIdentityR1;
 inline XMVECTOR XMDIR					= g_XMIdentityR2;
 
-// Engine
+// cpu_engine
 ///////////
 
 #undef near
@@ -51,12 +51,12 @@ inline XMVECTOR XMDIR					= g_XMIdentityR2;
 #undef DrawText
 
 // Forward declarations
-struct AABB;
-struct CAMERA;
-struct OBB;
-struct PS_IO;
-struct TILE;
-class Engine;
+struct cpu_aabb;
+struct cpu_camera;
+struct cpu_obb;
+struct cpu_ps_io;
+struct cpu_tile;
+class cpu_engine;
 
 // Types
 using i16								= __int16;
@@ -65,7 +65,7 @@ using i32								= __int32;
 using ui32								= unsigned __int32;
 using i64								= __int64;
 using ui64								= unsigned __int64;
-using PS_FUNC							= void(*)(PS_IO& data);
+using PS_FUNC							= void(*)(cpu_ps_io& data);
 
 // Macro
 #define DELPTR(p)						{ if ( (p) ) { delete (p); (p) = nullptr; } }
@@ -102,7 +102,7 @@ inline XMFLOAT3 ORANGE					= { 1.0f, 0.5f, 0.0f };
 #include "Thread.h"
 #include "State.h"
 
-// Engine
+// cpu_engine
 #include "UI.h"
 #include "Font.h"
 #include "Particle.h"

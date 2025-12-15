@@ -75,7 +75,7 @@ void Game::Execute()
 	// Missiles
 	for ( auto it=m_missiles.begin() ; it!=m_missiles.end() ; )
 	{
-		ENTITY* pMissile = *it;
+		cpu_entity* pMissile = *it;
 		pMissile->transform.Move(m_dt*m_missileSpeed);
 		if ( pMissile->lifetime>10.0f )
 		{
@@ -95,7 +95,7 @@ void Game::Execute()
 	// Fire
 	if ( m_input.IsKey(VK_SPACE) )
 	{
-		ENTITY* pMissile = CreateEntity();
+		cpu_entity* pMissile = CreateEntity();
 		pMissile->pMesh = &m_meshMissile;
 		pMissile->transform.SetScaling(0.2f);
 		pMissile->transform.pos = m_pShip->transform.pos;
@@ -107,8 +107,8 @@ void Game::Execute()
 	{
 		XMFLOAT2 pt;
 		GetCursor(pt);
-		RAY ray = GetCameraRay(pt);
-		ENTITY* pMissile = CreateEntity();
+		cpu_ray ray = GetCameraRay(pt);
+		cpu_entity* pMissile = CreateEntity();
 		pMissile->pMesh = &m_meshMissile;
 		pMissile->transform.SetScaling(0.2f);
 		pMissile->transform.pos = ray.pos;
@@ -169,7 +169,7 @@ void Game::OnPostRender()
 	DrawText(&m_font, info.c_str(), GetWidth()/2, 10, TEXT_CENTER);
 }
 
-void Game::MyPixelShader(PS_IO& io)
+void Game::MyPixelShader(cpu_ps_io& io)
 {
 	// garder seulement le rouge du pixel éclairé
 	io.color.x = io.p.color.x;

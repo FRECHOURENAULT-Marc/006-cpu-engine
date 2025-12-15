@@ -1,11 +1,11 @@
 #include "stdafx.h"
 
-void ThreadJob::OnCallback()
+void cpu_thread_job::OnCallback()
 {
-	Engine* pEngine = Engine::Instance();
+	cpu_engine* pEngine = cpu_engine::Instance();
 	m_quitRequest = false;
 
-	// Thread
+	// cpu_thread
 	while ( true )
 	{
 		// Waiting next job

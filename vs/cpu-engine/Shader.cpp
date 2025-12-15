@@ -1,6 +1,6 @@
 #include "stdafx.h"
 
-MATERIAL::MATERIAL()
+cpu_material::cpu_material()
 {
 #ifdef _DEBUG
 	lighting = GOURAUD;

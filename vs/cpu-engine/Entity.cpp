@@ -1,18 +1,18 @@
 #include "stdafx.h"
 
-TRANSFORM::TRANSFORM()
+cpu_transform::cpu_transform()
 {
 	Identity();
 }
 
-void TRANSFORM::Identity()
+void cpu_transform::Identity()
 {
 	pos = ZERO;
 	sca = ONE;
 	ResetRotation();
 }
 
-void TRANSFORM::Update()
+void cpu_transform::Update()
 {
 	XMVECTOR s = XMLoadFloat3(&sca);
 	XMVECTOR p = XMLoadFloat3(&pos);
@@ -30,28 +30,28 @@ void TRANSFORM::Update()
 	XMStoreFloat4x4(&world, w);
 }
 
-void TRANSFORM::SetScaling(float scale)
+void cpu_transform::SetScaling(float scale)
 {
 	sca.x = scale;
 	sca.y = scale;
 	sca.z = scale;
 }
 
-void TRANSFORM::SetPosition(float x, float y, float z)
+void cpu_transform::SetPosition(float x, float y, float z)
 {
 	pos.x = x;
 	pos.y = y;
 	pos.z = z;
 }
 
-void TRANSFORM::Move(float dist)
+void cpu_transform::Move(float dist)
 {
 	pos.x += dir.x * dist;
 	pos.y += dir.y * dist;
 	pos.z += dir.z * dist;
 }
 
-void TRANSFORM::ResetRotation()
+void cpu_transform::ResetRotation()
 {
 	dir = { 0.0f, 0.0f, 1.0f };
 	right = { 1.0f, 0.0f, 0.0f };
@@ -60,7 +60,7 @@ void TRANSFORM::ResetRotation()
 	XMStoreFloat4x4(&rot, XMMatrixIdentity());
 }
 
-void TRANSFORM::SetRotation(TRANSFORM& transform)
+void cpu_transform::SetRotation(cpu_transform& transform)
 {
 	dir = transform.dir;
 	right = transform.right;
@@ -69,13 +69,13 @@ void TRANSFORM::SetRotation(TRANSFORM& transform)
 	rot = transform.rot;
 }
 
-void TRANSFORM::SetYPR(float yaw, float pitch, float roll)
+void cpu_transform::SetYPR(float yaw, float pitch, float roll)
 {
 	ResetRotation();
 	AddYPR(yaw, pitch, roll);
 }
 
-void TRANSFORM::AddYPR(float yaw, float pitch, float roll)
+void cpu_transform::AddYPR(float yaw, float pitch, float roll)
 {
 	XMVECTOR axisDir = XMLoadFloat3(&dir);
 	XMVECTOR axisRight = XMLoadFloat3(&right);
@@ -106,7 +106,7 @@ void TRANSFORM::AddYPR(float yaw, float pitch, float roll)
 	dir.z = rot._33;
 }
 
-void TRANSFORM::LookAt(float x, float y, float z)
+void cpu_transform::LookAt(float x, float y, float z)
 {
 	XMVECTOR vA = XMLoadFloat3(&pos);
 	XMVECTOR vB = XMVectorSet(x, y, z, 0.0f);
@@ -127,7 +127,7 @@ void TRANSFORM::LookAt(float x, float y, float z)
 	dir.z = rot._33;
 }
 
-void TRANSFORM::LookTo(float ndx, float ndy, float ndz)
+void cpu_transform::LookTo(float ndx, float ndy, float ndz)
 {
 	XMVECTOR vDir = XMVectorSet(ndx, ndy, ndz, 0.0f);
 	XMMATRIX cam = XMMatrixTranspose(XMMatrixLookToLH(XMVectorZero(), vDir, XMUP));
@@ -146,7 +146,7 @@ void TRANSFORM::LookTo(float ndx, float ndy, float ndz)
 	dir.z = rot._33;
 }
 
-void TRANSFORM::LookTo(XMFLOAT3& ndir)
+void cpu_transform::LookTo(XMFLOAT3& ndir)
 {
 	LookTo(ndir.x, ndir.y, ndir.z);
 }
@@ -155,7 +155,7 @@ void TRANSFORM::LookTo(XMFLOAT3& ndir)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-ENTITY::ENTITY()
+cpu_entity::cpu_entity()
 {
 	index = -1;
 	sortedIndex = -1;
@@ -172,13 +172,13 @@ ENTITY::ENTITY()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-FRUSTUM::FRUSTUM()
+cpu_frustum::cpu_frustum()
 {
 	for ( int i=0 ; i<6 ; i++ )
 		planes[i] = { 0.0f, 0.0f, 0.0f, 0.0f };
 }
 
-void FRUSTUM::FromViewProj(const XMFLOAT4X4& viewProj)
+void cpu_frustum::FromViewProj(const XMFLOAT4X4& viewProj)
 {
 	XMVECTOR left   = XMVectorSet(viewProj._14 + viewProj._11, viewProj._24 + viewProj._21, viewProj._34 + viewProj._31, viewProj._44 + viewProj._41);
 	XMVECTOR right  = XMVectorSet(viewProj._14 - viewProj._11, viewProj._24 - viewProj._21, viewProj._34 - viewProj._31, viewProj._44 - viewProj._41);
@@ -196,7 +196,7 @@ void FRUSTUM::FromViewProj(const XMFLOAT4X4& viewProj)
 	XMStoreFloat4(&planes[5], NormalizePlane(farP));
 }
 
-bool FRUSTUM::Intersect(const XMFLOAT3& center, float radius)
+bool cpu_frustum::Intersect(const XMFLOAT3& center, float radius)
 {
 	XMVECTOR c = XMVectorSet(center.x, center.y, center.z, 1.0f);
 	XMVECTOR r = XMVectorReplicate(radius);
@@ -209,7 +209,7 @@ bool FRUSTUM::Intersect(const XMFLOAT3& center, float radius)
 	return true;
 }
 
-XMVECTOR XM_CALLCONV FRUSTUM::NormalizePlane(FXMVECTOR p)
+XMVECTOR XM_CALLCONV cpu_frustum::NormalizePlane(FXMVECTOR p)
 {
 	// p = (a,b,c,d)
 	XMVECTOR n = XMVectorSetW(p, 0.0f);
@@ -221,19 +221,19 @@ XMVECTOR XM_CALLCONV FRUSTUM::NormalizePlane(FXMVECTOR p)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-CAMERA::CAMERA()
+cpu_camera::cpu_camera()
 {
 	fov = XM_PIDIV4;
 	near = 1.0f;
 	far = 100.0f;
 }
 
-void CAMERA::UpdateProjection(float aspectRatio)
+void cpu_camera::UpdateProjection(float aspectRatio)
 {
 	XMStoreFloat4x4(&matProj, XMMatrixPerspectiveFovLH(fov, aspectRatio, near, far));
 }
 
-void CAMERA::Update()
+void cpu_camera::Update()
 {
 	transform.Update();
 

@@ -1,8 +1,8 @@
 #include "stdafx.h"
 
-PARTICLE_PHYSICS::PARTICLE_PHYSICS()
+cpu_particle_physics::cpu_particle_physics()
 {
-	memset(this, 0, sizeof(PARTICLE_PHYSICS));
+	memset(this, 0, sizeof(cpu_particle_physics));
 	gy = -9.81f;
 }
 
@@ -10,17 +10,17 @@ PARTICLE_PHYSICS::PARTICLE_PHYSICS()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-PARTICLE_DATA::PARTICLE_DATA()
+cpu_particle_data::cpu_particle_data()
 {
-	memset(this, 0, sizeof(PARTICLE_DATA));
+	memset(this, 0, sizeof(cpu_particle_data));
 }
 
-PARTICLE_DATA::~PARTICLE_DATA()
+cpu_particle_data::~cpu_particle_data()
 {
 	Destroy();
 }
 
-void PARTICLE_DATA::Create(int maxP)
+void cpu_particle_data::Create(int maxP)
 {
 	Destroy();
 	maxCount = maxP;
@@ -38,7 +38,7 @@ void PARTICLE_DATA::Create(int maxP)
 	b = new float[maxP];
 }
 
-void PARTICLE_DATA::Destroy()
+void cpu_particle_data::Destroy()
 {
 	delete [] px;
 	delete [] py;
@@ -52,10 +52,10 @@ void PARTICLE_DATA::Destroy()
 	delete [] r;
 	delete [] g;
 	delete [] b;
-	memset(this, 0, sizeof(PARTICLE_DATA));
+	memset(this, 0, sizeof(cpu_particle_data));
 }
 
-void PARTICLE_DATA::Update(float dt, const PARTICLE_PHYSICS& phys)
+void cpu_particle_data::Update(float dt, const cpu_particle_physics& phys)
 {
 	if ( dt<=0.0f || alive<=0 )
 		return;
@@ -135,7 +135,7 @@ void PARTICLE_DATA::Update(float dt, const PARTICLE_PHYSICS& phys)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-PARTICLE_EMITTER::PARTICLE_EMITTER()
+cpu_particle_emitter::cpu_particle_emitter()
 {
 	index = -1;
 	sortedIndex = -1;
@@ -147,7 +147,7 @@ PARTICLE_EMITTER::PARTICLE_EMITTER()
 	durationMax = 1.2f;
 };
 
-void PARTICLE_EMITTER::Update(PARTICLE_DATA& p, float dt, float ox, float oy, float oz, float baseVx, float baseVy, float baseVz, float r, float g, float b)
+void cpu_particle_emitter::Update(cpu_particle_data& p, float dt, float ox, float oy, float oz, float baseVx, float baseVy, float baseVz, float r, float g, float b)
 {
 	accum += rate * dt;
 	int n = (int)accum;

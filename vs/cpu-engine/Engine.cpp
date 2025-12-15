@@ -1,8 +1,8 @@
 #include "stdafx.h"
 
-Engine* Engine::s_pEngine;
+cpu_engine* cpu_engine::s_pEngine;
 
-Engine::Engine()
+cpu_engine::cpu_engine()
 {
 	s_pEngine = this;
 	m_hInstance = nullptr;
@@ -24,12 +24,12 @@ Engine::Engine()
 #endif
 }
 
-Engine::~Engine()
+cpu_engine::~cpu_engine()
 {
 	assert( m_hInstance==nullptr );
 }
 
-Engine* Engine::Instance()
+cpu_engine* cpu_engine::Instance()
 {
 	return s_pEngine;
 }
@@ -38,7 +38,7 @@ Engine* Engine::Instance()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void Engine::Initialize(HINSTANCE hInstance, int renderWidth, int renderHeight, float windowScaleAtStart, bool bilinear)
+void cpu_engine::Initialize(HINSTANCE hInstance, int renderWidth, int renderHeight, float windowScaleAtStart, bool bilinear)
 {
 	if ( m_hInstance )
 		return;
@@ -114,7 +114,7 @@ void Engine::Initialize(HINSTANCE hInstance, int renderWidth, int renderHeight, 
 	{
 		for ( int col=0 ; col<m_tileColCount ; col++ )
 		{
-			TILE tile;
+			cpu_tile tile;
 			tile.row = row;
 			tile.col = col;
 			tile.index = (int)m_tiles.size();
@@ -130,11 +130,11 @@ void Engine::Initialize(HINSTANCE hInstance, int renderWidth, int renderHeight, 
 		}
 	}
 
-	// Thread
-	m_threads = new ThreadJob[m_threadCount];
+	// cpu_thread
+	m_threads = new cpu_thread_job[m_threadCount];
 	for ( int i=0 ; i<m_threadCount ; i++ )
 	{
-		ThreadJob& thread = m_threads[i];
+		cpu_thread_job& thread = m_threads[i];
 		thread.m_count = m_tileCount;
 		thread.m_hEventStart = CreateEvent(nullptr, FALSE, FALSE, nullptr);
 		thread.m_hEventEnd = CreateEvent(nullptr, FALSE, FALSE, nullptr);
@@ -144,15 +144,15 @@ void Engine::Initialize(HINSTANCE hInstance, int renderWidth, int renderHeight, 
 	ShowWindow(m_hWnd, SW_SHOW);
 }
 
-void Engine::Uninitialize()
+void cpu_engine::Uninitialize()
 {
 	if ( m_hInstance==nullptr )
 		return;
 
-	// Thread
+	// cpu_thread
 	for ( int i=0 ; i<m_threadCount ; i++ )
 	{
-		ThreadJob& thread = m_threads[i];
+		cpu_thread_job& thread = m_threads[i];
 		CloseHandle(thread.m_hEventStart);
 		CloseHandle(thread.m_hEventEnd);
 	}
@@ -182,7 +182,7 @@ void Engine::Uninitialize()
 	m_hInstance = nullptr;
 }
 
-void Engine::Run()
+void cpu_engine::Run()
 {
 	// Camera
 	FixWindow();
@@ -197,7 +197,7 @@ void Engine::Run()
 	m_fps = 0;
 	OnStart();
 
-	// Thread
+	// cpu_thread
 	for ( int i=0 ; i<m_threadCount ; i++ )
 		m_threads[i].Run();
 
@@ -225,7 +225,7 @@ void Engine::Run()
 		Render();
 	}
 
-	// Thread
+	// cpu_thread
 	for ( int i=0 ; i<m_threadCount ; i++ )
 		m_threads[i].m_quitRequest = true;
 	for ( int i=0 ; i<m_threadCount ; i++ )
@@ -237,7 +237,7 @@ void Engine::Run()
 	OnExit();
 }
 
-void Engine::FixWindow()
+void cpu_engine::FixWindow()
 {
 	RECT rc;
 	GetClientRect(m_hWnd, &rc);
@@ -250,13 +250,13 @@ void Engine::FixWindow()
 #endif
 }
 
-void Engine::FixProjection()
+void cpu_engine::FixProjection()
 {
 	const float ratio = float(m_windowWidth) / float(m_windowHeight);
 	m_camera.UpdateProjection(ratio);
 }
 
-void Engine::FixDevice()
+void cpu_engine::FixDevice()
 {
 #ifdef CONFIG_GPU
 	D2D1_SIZE_U size = D2D1::SizeU(m_windowWidth, m_windowHeight);
@@ -275,37 +275,37 @@ void Engine::FixDevice()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-ENTITY* Engine::CreateEntity()
+cpu_entity* cpu_engine::CreateEntity()
 {
 	return m_entities.Create();
 }
 
-SPRITE* Engine::CreateSprite()
+cpu_sprite* cpu_engine::CreateSprite()
 {
 	return m_sprites.Create();
 }
 
-PARTICLE_EMITTER* Engine::CreateParticleEmitter()
+cpu_particle_emitter* cpu_engine::CreateParticleEmitter()
 {
 	return m_particleEmitters.Create();
 }
 
-//void Engine::ReleaseFSM(cpu_fsm* pFSM)
+//void cpu_engine::ReleaseFSM(cpu_fsm* pFSM)
 //{
 //	m_fsms.Release(pFSM);
 //}
 
-void Engine::ReleaseEntity(ENTITY* pEntity)
+void cpu_engine::ReleaseEntity(cpu_entity* pEntity)
 {
 	m_entities.Release(pEntity);
 }
 
-void Engine::ReleaseSprite(SPRITE* pSprite)
+void cpu_engine::ReleaseSprite(cpu_sprite* pSprite)
 {
 	m_sprites.Release(pSprite);
 }
 
-void Engine::ReleaseParticleEmitter(PARTICLE_EMITTER* pEmitter)
+void cpu_engine::ReleaseParticleEmitter(cpu_particle_emitter* pEmitter)
 {
 	m_particleEmitters.Release(pEmitter);
 }
@@ -314,7 +314,7 @@ void Engine::ReleaseParticleEmitter(PARTICLE_EMITTER* pEmitter)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void Engine::GetCursor(XMFLOAT2& pos)
+void cpu_engine::GetCursor(XMFLOAT2& pos)
 {
 	POINT pt;
 	GetCursorPos(&pt);
@@ -325,7 +325,7 @@ void Engine::GetCursor(XMFLOAT2& pos)
 	pos.y = pos.y*m_renderHeight/m_windowHeight;
 }
 
-RAY Engine::GetCameraRay(XMFLOAT2& pt)
+cpu_ray cpu_engine::GetCameraRay(XMFLOAT2& pt)
 {
 	float px = pt.x*2.0f/m_renderWidth - 1.0f;
 	float py = pt.y*2.0f/m_renderHeight - 1.0f;
@@ -334,7 +334,7 @@ RAY Engine::GetCameraRay(XMFLOAT2& pt)
 	float y = -py/m_camera.matProj._22;
 	float z = 1.0f;
 
-	RAY ray;
+	cpu_ray ray;
 	ray.pos.x = m_camera.transform.world._41;
 	ray.pos.y = m_camera.transform.world._42;
 	ray.pos.z = m_camera.transform.world._43;
@@ -345,7 +345,7 @@ RAY Engine::GetCameraRay(XMFLOAT2& pt)
 	return ray;
 }
 
-CAMERA* Engine::GetCamera()
+cpu_camera* cpu_engine::GetCamera()
 {
 	return &m_camera;
 }
@@ -354,7 +354,7 @@ CAMERA* Engine::GetCamera()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void Engine::DrawText(FONT* pFont, const char* text, int x, int y, int align)
+void cpu_engine::DrawText(cpu_font* pFont, const char* text, int x, int y, int align)
 {
 	if ( pFont==nullptr || pFont->rgba.size()==0 || text==nullptr )
 		return;
@@ -373,7 +373,7 @@ void Engine::DrawText(FONT* pFont, const char* text, int x, int y, int align)
 		for ( int i=0 ; i<len ; ++i )
 		{
 			const byte c = (byte)start[i];
-			const GLYPH& g = pFont->glyph[c];
+			const cpu_glyph& g = pFont->glyph[c];
 			if ( g.valid==false )
 			{
 				penX += cw;
@@ -402,7 +402,7 @@ void Engine::DrawText(FONT* pFont, const char* text, int x, int y, int align)
 	}
 }
 
-void Engine::DrawSprite(SPRITE* pSprite)
+void cpu_engine::DrawSprite(cpu_sprite* pSprite)
 {
 	if ( pSprite==nullptr || pSprite->dead || pSprite->pTexture==nullptr )
 		return;
@@ -413,7 +413,7 @@ void Engine::DrawSprite(SPRITE* pSprite)
 	Copy(dst, m_renderWidth, m_renderHeight, pSprite->x, pSprite->y, pSprite->pTexture->rgba, width, height, 0, 0, width, height);
 }
 
-void Engine::DrawHorzLine(int x1, int x2, int y, XMFLOAT3& color)
+void cpu_engine::DrawHorzLine(int x1, int x2, int y, XMFLOAT3& color)
 {
 	COLORREF bgr = ToBGR(color);
 	if ( y<0 || y>=m_renderHeight )
@@ -425,7 +425,7 @@ void Engine::DrawHorzLine(int x1, int x2, int y, XMFLOAT3& color)
 		buf[i] = bgr;
 }
 
-void Engine::DrawVertLine(int y1, int y2, int x, XMFLOAT3& color)
+void cpu_engine::DrawVertLine(int y1, int y2, int x, XMFLOAT3& color)
 {
 	COLORREF bgr = ToBGR(color);
 	if ( x<0 || x>=m_renderWidth )
@@ -440,7 +440,7 @@ void Engine::DrawVertLine(int y1, int y2, int x, XMFLOAT3& color)
 	}
 }
 
-void Engine::DrawRectangle(int x, int y, int w, int h, XMFLOAT3& color)
+void cpu_engine::DrawRectangle(int x, int y, int w, int h, XMFLOAT3& color)
 {
 	DrawHorzLine(x, x+w, y, color);
 	DrawHorzLine(x, x+w, y+h, color);
@@ -448,7 +448,7 @@ void Engine::DrawRectangle(int x, int y, int w, int h, XMFLOAT3& color)
 	DrawVertLine(y, y+h, x+w, color);
 }
 
-void Engine::DrawLine(int x0, int y0, float z0, int x1, int y1, float z1, XMFLOAT3& color)
+void cpu_engine::DrawLine(int x0, int y0, float z0, int x1, int y1, float z1, XMFLOAT3& color)
 {
 	ui32 bgr = ToBGR(color);
 
@@ -500,7 +500,7 @@ void Engine::DrawLine(int x0, int y0, float z0, int x1, int y1, float z1, XMFLOA
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-LRESULT Engine::OnWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+LRESULT cpu_engine::OnWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	switch ( message )
 	{
@@ -519,7 +519,7 @@ LRESULT Engine::OnWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lPar
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-bool Engine::Time()
+bool cpu_engine::Time()
 {
 	DWORD curtime = timeGetTime();
 	DWORD deltatime = curtime - m_systime;
@@ -548,7 +548,7 @@ bool Engine::Time()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void Engine::Update()
+void cpu_engine::Update()
 {
 	// Controller
 	m_input.Update();
@@ -566,11 +566,11 @@ void Engine::Update()
 	Update_Purge();
 }
 
-void Engine::Update_Physics()
+void cpu_engine::Update_Physics()
 {
 	for ( int i=0 ; i<m_entities.count ; i++ )
 	{
-		ENTITY* pEntity = m_entities[i];
+		cpu_entity* pEntity = m_entities[i];
 		if ( pEntity->dead )
 			continue;
 
@@ -578,7 +578,7 @@ void Engine::Update_Physics()
 	}
 }
 
-void Engine::Update_FSM()
+void cpu_engine::Update_FSM()
 {
 	for ( int i=0 ; i<m_fsms.count ; i++ )
 	{
@@ -590,7 +590,7 @@ void Engine::Update_FSM()
 	}
 }
 
-void Engine::Update_Purge()
+void cpu_engine::Update_Purge()
 {
 	m_fsms.Purge();
 	m_entities.Purge();
@@ -602,7 +602,7 @@ void Engine::Update_Purge()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void Engine::Render()
+void cpu_engine::Render()
 {
 	// Prepare
 	m_camera.Update();
@@ -650,27 +650,27 @@ void Engine::Render()
 #endif
 }
 
-void Engine::Render_SortZ()
+void cpu_engine::Render_SortZ()
 {
 	// Entities
-	std::sort(m_entities.sortedList.begin(), m_entities.sortedList.begin()+m_entities.count, [](const ENTITY* pA, const ENTITY* pB) { return pA->view.z < pB->view.z; });
+	std::sort(m_entities.sortedList.begin(), m_entities.sortedList.begin()+m_entities.count, [](const cpu_entity* pA, const cpu_entity* pB) { return pA->view.z < pB->view.z; });
 	for ( int i=0 ; i<m_entities.count ; i++ )
 		m_entities.sortedList[i]->sortedIndex = i;
 
 	// Sprites
-	std::sort(m_sprites.sortedList.begin(), m_sprites.sortedList.begin()+m_sprites.count, [](const SPRITE* pA, const SPRITE* pB) { return pA->z < pB->z; });
+	std::sort(m_sprites.sortedList.begin(), m_sprites.sortedList.begin()+m_sprites.count, [](const cpu_sprite* pA, const cpu_sprite* pB) { return pA->z < pB->z; });
 	for ( int i=0 ; i<m_sprites.count ; i++ )
 		m_sprites.sortedList[i]->sortedIndex = i;
 }
 
-void Engine::Render_RecalculateMatrices()
+void cpu_engine::Render_RecalculateMatrices()
 {
 	float width = (float)m_renderWidth;
 	float height = (float)m_renderHeight;
 
 	for ( int iEntity=0 ; iEntity<m_entities.count ; iEntity++ )
 	{
-		ENTITY* pEntity = m_entities[iEntity];
+		cpu_entity* pEntity = m_entities[iEntity];
 		if ( pEntity->dead )
 			continue;
 
@@ -678,11 +678,11 @@ void Engine::Render_RecalculateMatrices()
 		pEntity->transform.Update();
 		XMMATRIX matWorld = XMLoadFloat4x4(&pEntity->transform.world);
 
-		// OBB
+		// cpu_obb
 		pEntity->obb = pEntity->pMesh->aabb;
 		pEntity->obb.Transform(matWorld);
 
-		// AABB
+		// cpu_aabb
 		pEntity->aabb = pEntity->obb;
 
 		// Radius
@@ -702,12 +702,12 @@ void Engine::Render_RecalculateMatrices()
 	}
 }
 
-void Engine::Render_ApplyClipping()
+void cpu_engine::Render_ApplyClipping()
 {
 	m_statsClipEntityCount = 0;
 	for ( int iEntity=0 ; iEntity<m_entities.count ; iEntity++ )
 	{
-		ENTITY* pEntity = m_entities[iEntity];
+		cpu_entity* pEntity = m_entities[iEntity];
 		if ( pEntity->dead )
 			continue;
 
@@ -723,7 +723,7 @@ void Engine::Render_ApplyClipping()
 	}
 }
 
-void Engine::Render_PrepareTiles()
+void cpu_engine::Render_PrepareTiles()
 {
 	// Reset
 	m_nextTile = 0;
@@ -731,7 +731,7 @@ void Engine::Render_PrepareTiles()
 	// Entities
 	for ( int iEntity=0 ; iEntity<m_entities.count ; iEntity++ )
 	{
-		ENTITY* pEntity = m_entities[iEntity];
+		cpu_entity* pEntity = m_entities[iEntity];
 		if ( pEntity->dead )
 			continue;
 
@@ -752,12 +752,12 @@ void Engine::Render_PrepareTiles()
 	}
 }
 
-void Engine::Render_Tile(int iTile)
+void cpu_engine::Render_Tile(int iTile)
 {
-	TILE& tile = m_tiles[iTile];
+	cpu_tile& tile = m_tiles[iTile];
 	for ( int iEntity=0 ; iEntity<m_entities.count ; iEntity++ )
 	{
-		ENTITY* pEntity = m_entities.sortedList[iEntity];
+		cpu_entity* pEntity = m_entities.sortedList[iEntity];
 		if ( pEntity->dead || pEntity->pMesh==nullptr || pEntity->clipped )
 			continue;
 	
@@ -773,11 +773,11 @@ void Engine::Render_Tile(int iTile)
 #endif
 }
 
-void Engine::Render_UI()
+void cpu_engine::Render_UI()
 {
 	for ( int iSprite=0 ; iSprite<m_sprites.count ; iSprite++ )
 	{
-		SPRITE* pSprite = m_sprites.sortedList[iSprite];
+		cpu_sprite* pSprite = m_sprites.sortedList[iSprite];
 		if ( pSprite->dead )
 			continue;
 
@@ -789,14 +789,14 @@ void Engine::Render_UI()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void Engine::Clear(XMFLOAT3& color)
+void cpu_engine::Clear(XMFLOAT3& color)
 {
 	ui32 bgr = ToBGR(color);
 	std::fill(m_colorBuffer.begin(), m_colorBuffer.end(), bgr);
 	std::fill(m_depthBuffer.begin(), m_depthBuffer.end(), 1.0f);
 }
 
-void Engine::ClearSky()
+void cpu_engine::ClearSky()
 {
 	ui32 gCol = ToBGR(m_groundColor);
 	ui32 sCol = ToBGR(m_skyColor);
@@ -856,7 +856,7 @@ void Engine::ClearSky()
 	// Sky Line
 	////////////
 
-	float bandPx = m_renderHeight/10.0f;
+	float bandPx = m_renderHeight/20.0f;
 	if ( bandPx<=0.5f )
 		return;
 
@@ -911,27 +911,27 @@ void Engine::ClearSky()
 	}
 }
 
-void Engine::DrawEntity(ENTITY* pEntity, TILE& tile)
+void cpu_engine::DrawEntity(cpu_entity* pEntity, cpu_tile& tile)
 {
-	MATERIAL& material = pEntity->pMaterial ? *pEntity->pMaterial : m_defaultMaterial;
+	cpu_material& material = pEntity->pMaterial ? *pEntity->pMaterial : m_defaultMaterial;
 	XMMATRIX matWorld = XMLoadFloat4x4(&pEntity->transform.world);
 	XMMATRIX normalMat = XMMatrixTranspose(XMMatrixInverse(nullptr, matWorld));
 	XMMATRIX matViewProj = XMLoadFloat4x4(&m_camera.matViewProj);
 	XMVECTOR lightDir = XMLoadFloat3(&m_lightDir);
 
-	DRAWCALL dc;
+	cpu_drawcall dc;
 	bool safe;
 	XMFLOAT3 screen[3];
-	VERTEX_OUT vo[3];
+	cpu_vertex_out vo[3];
 
-	for ( const TRIANGLE& triangle : pEntity->pMesh->triangles )
+	for ( const cpu_triangle& triangle : pEntity->pMesh->triangles )
 	{
 		// Verter shader
 		safe = true;
 		for ( int i=0 ; i<3 ; ++i )
 		{
 			// Vertex
-			const VERTEX& in = triangle.v[i];
+			const cpu_vertex& in = triangle.v[i];
 
 			// World pos
 			XMVECTOR loc = XMLoadFloat3(&in.pos);
@@ -1000,7 +1000,7 @@ void Engine::DrawEntity(ENTITY* pEntity, TILE& tile)
 	}
 }
 
-void Engine::FillTriangle(DRAWCALL& dc)
+void cpu_engine::FillTriangle(cpu_drawcall& dc)
 {
 	const float x1 = dc.tri[0].x, y1 = dc.tri[0].y, z1 = dc.tri[0].z;
 	const float x2 = dc.tri[1].x, y2 = dc.tri[1].y, z2 = dc.tri[1].z;
@@ -1052,7 +1052,7 @@ void Engine::FillTriangle(DRAWCALL& dc)
 	const float dE31dy = b31;
 
 	const PS_FUNC func = dc.pMaterial->ps ? dc.pMaterial->ps : &PixelShader;
-	PS_IO io;
+	cpu_ps_io io;
 	for ( int y=minY ; y<maxY ; ++y )
 	{
 		float e12 = e12_row;
@@ -1094,7 +1094,7 @@ void Engine::FillTriangle(DRAWCALL& dc)
 				continue;
 			}
 
-			// Input
+			// cpu_input
 			io.p.x = x;
 			io.p.y = y;
 			io.p.depth = z;
@@ -1126,11 +1126,11 @@ void Engine::FillTriangle(DRAWCALL& dc)
 			{
 				XMVECTOR n = XMLoadFloat3(&io.p.normal);				
 				//n = XMVector3Normalize(n); // Expensive (better results)
-				XMVECTOR l = XMLoadFloat3(&Engine::Instance()->m_lightDir);
+				XMVECTOR l = XMLoadFloat3(&cpu_engine::Instance()->m_lightDir);
 				float ndotl = XMVectorGetX(XMVector3Dot(n, l));
 				if ( ndotl<0.0f )
 					ndotl = 0.0f;
-				float intensity = ndotl + Engine::Instance()->m_ambient;
+				float intensity = ndotl + cpu_engine::Instance()->m_ambient;
 				io.p.color.x = io.p.albedo.x * intensity;
 				io.p.color.y = io.p.albedo.y * intensity;
 				io.p.color.z = io.p.albedo.z * intensity;
@@ -1161,7 +1161,7 @@ void Engine::FillTriangle(DRAWCALL& dc)
 	}
 }
 
-bool Engine::Copy(byte* dst, int dstW, int dstH, int dstX, int dstY, const uint8_t* src, int srcW, int srcH, int srcX, int srcY, int w, int h)
+bool cpu_engine::Copy(byte* dst, int dstW, int dstH, int dstX, int dstY, const uint8_t* src, int srcW, int srcH, int srcX, int srcY, int w, int h)
 {
 	if ( w<=0 || h<=0 )
 		return false;
@@ -1213,7 +1213,7 @@ bool Engine::Copy(byte* dst, int dstW, int dstH, int dstX, int dstY, const uint8
 	return true;
 }
 
-void Engine::PixelShader(PS_IO& io)
+void cpu_engine::PixelShader(cpu_ps_io& io)
 {
 	io.color = io.p.color;
 }
@@ -1222,7 +1222,7 @@ void Engine::PixelShader(PS_IO& io)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void Engine::Present()
+void cpu_engine::Present()
 {
 #ifdef CONFIG_GPU
 	if ( m_pRenderTarget==nullptr || m_pBitmap==nullptr )
@@ -1262,9 +1262,9 @@ void Engine::Present()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-LRESULT Engine::WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+LRESULT cpu_engine::WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-	Engine* pEngine = (Engine*)GetWindowLongPtr(hWnd, GWLP_USERDATA);
+	cpu_engine* pEngine = (cpu_engine*)GetWindowLongPtr(hWnd, GWLP_USERDATA);
 	if ( pEngine )
 		return pEngine->OnWindowProc(hWnd, message, wParam, lParam);
 

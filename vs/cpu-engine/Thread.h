@@ -1,13 +1,13 @@
 #pragma once
 
-class Thread
+class cpu_thread
 {
 public:
 	using _METHOD = std::function<void()>;
 
 public:
-	Thread();
-	virtual ~Thread();
+	cpu_thread();
+	virtual ~cpu_thread();
 
 	bool Run();
 	bool Run(const _METHOD& callback);

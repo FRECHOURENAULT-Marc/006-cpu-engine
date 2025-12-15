@@ -1,30 +1,30 @@
 #include "stdafx.h"
 
-Input::Input()
+cpu_input::cpu_input()
 {
 	memset(m_keys, 0, 256);
 }
 
-Input::~Input()
+cpu_input::~cpu_input()
 {
 }
 
-bool Input::IsKey(int key)
+bool cpu_input::IsKey(int key)
 {
 	return m_keys[key]==_DOWN || m_keys[key]==_PUSH;
 }
 
-bool Input::IsKeyUp(int key)
+bool cpu_input::IsKeyUp(int key)
 {
 	return m_keys[key]==_UP;
 }
 
-bool Input::IsKeyDown(int key)
+bool cpu_input::IsKeyDown(int key)
 {
 	return m_keys[key]==_DOWN;
 }
 
-void Input::Update()
+void cpu_input::Update()
 {
 	for ( int i=1 ; i<255 ; i++ )
 	{

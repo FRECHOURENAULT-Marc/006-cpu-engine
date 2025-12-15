@@ -1,6 +1,6 @@
 #pragma once
 
-class Input
+class cpu_input
 {
 public:
 	enum
@@ -12,8 +12,8 @@ public:
 	};
 
 public:
-	Input();
-	virtual ~Input();
+	cpu_input();
+	virtual ~cpu_input();
 
 	bool IsKey(int key);
 	bool IsKeyDown(int key);

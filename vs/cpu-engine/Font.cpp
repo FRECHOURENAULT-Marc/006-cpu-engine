@@ -1,6 +1,6 @@
 #include "stdafx.h"
 
-FONT::FONT()
+cpu_font::cpu_font()
 {
 	first = 0;
 	last  = 0;
@@ -12,7 +12,7 @@ FONT::FONT()
 	height = 0;
 }
 
-bool FONT::Create(int fontPx, XMFLOAT3 color, const char* fontName, int cellWidth, int cellHeight, int firstChar, int lastChar)
+bool cpu_font::Create(int fontPx, XMFLOAT3 color, const char* fontName, int cellWidth, int cellHeight, int firstChar, int lastChar)
 {
 	if ( cellHeight==-1 )
 		cellHeight = fontPx;

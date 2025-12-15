@@ -1,14 +1,14 @@
 #pragma once
 
-class Engine
+class cpu_engine
 {
 public:
-	friend ThreadJob;
+	friend cpu_thread_job;
 
 public:
-	Engine();
-	virtual ~Engine();
-	static Engine* Instance();
+	cpu_engine();
+	virtual ~cpu_engine();
+	static cpu_engine* Instance();
 
 	void Initialize(HINSTANCE hInstance, int renderWidth, int renderHeight, float windowScaleAtStart = 1.0f, bool hardwareBilinear = false);
 	void Uninitialize();
@@ -21,21 +21,21 @@ public:
 
 	template <typename T>
 	cpu_fsm<T>* CreateFSM(T* pInstance);
-	ENTITY* CreateEntity();
-	SPRITE* CreateSprite();
-	PARTICLE_EMITTER* CreateParticleEmitter();
+	cpu_entity* CreateEntity();
+	cpu_sprite* CreateSprite();
+	cpu_particle_emitter* CreateParticleEmitter();
 	template <typename T>
 	void ReleaseFSM(cpu_fsm<T>* pFSM);
-	void ReleaseEntity(ENTITY* pEntity);
-	void ReleaseSprite(SPRITE* pSprite);
-	void ReleaseParticleEmitter(PARTICLE_EMITTER* pEmitter);
+	void ReleaseEntity(cpu_entity* pEntity);
+	void ReleaseSprite(cpu_sprite* pSprite);
+	void ReleaseParticleEmitter(cpu_particle_emitter* pEmitter);
 
 	void GetCursor(XMFLOAT2& pt);
-	RAY GetCameraRay(XMFLOAT2& pt);
-	CAMERA* GetCamera();
+	cpu_ray GetCameraRay(XMFLOAT2& pt);
+	cpu_camera* GetCamera();
 
-	void DrawText(FONT* pFont, const char* text, int x, int y, int align = TEXT_LEFT);
-	void DrawSprite(SPRITE* pSprite);
+	void DrawText(cpu_font* pFont, const char* text, int x, int y, int align = TEXT_LEFT);
+	void DrawSprite(cpu_sprite* pSprite);
 	void DrawHorzLine(int x1, int x2, int y, XMFLOAT3& color);
 	void DrawVertLine(int y1, int y2, int x, XMFLOAT3& color);
 	void DrawRectangle(int x, int y, int w, int h, XMFLOAT3& color);
@@ -67,10 +67,10 @@ private:
 
 	void Clear(XMFLOAT3& color);
 	void ClearSky();
-	void DrawEntity(ENTITY* pEntity, TILE& tile);
-	void FillTriangle(DRAWCALL& dc);
+	void DrawEntity(cpu_entity* pEntity, cpu_tile& tile);
+	void FillTriangle(cpu_drawcall& dc);
 	bool Copy(byte* dst, int dstW, int dstH, int dstX, int dstY, const uint8_t* src, int srcW, int srcH, int srcX, int srcY, int w, int h);
-	static void PixelShader(PS_IO& io);
+	static void PixelShader(cpu_ps_io& io);
 
 	void Present();
 
@@ -78,7 +78,7 @@ private:
 
 protected:
 	// Controller
-	Input m_input;
+	cpu_input m_input;
 
 	// Color
 	bool m_sky;
@@ -89,7 +89,7 @@ protected:
 	// Light
 	XMFLOAT3 m_lightDir;
 	float m_ambient;
-	MATERIAL m_defaultMaterial;
+	cpu_material m_defaultMaterial;
 	
 	// Time
 	float m_time;
@@ -97,7 +97,7 @@ protected:
 	int m_fps;
 
 	// Camera
-	CAMERA m_camera;
+	cpu_camera m_camera;
 
 	// Stats
 	int m_statsClipEntityCount;
@@ -106,11 +106,11 @@ protected:
 	int m_statsDrawnTriangleCount;
 
 private:
-	static Engine* s_pEngine;
+	static cpu_engine* s_pEngine;
 
-	// Thread
+	// cpu_thread
 	int m_threadCount;
-	ThreadJob* m_threads;
+	cpu_thread_job* m_threads;
 	std::atomic<int> m_nextTile;
 
 	// Window
@@ -145,7 +145,7 @@ private:
 	int m_tileRowCount;
 	int m_tileColCount;
 	int m_tileCount;
-	std::vector<TILE> m_tiles;
+	std::vector<cpu_tile> m_tiles;
 
 	// Time
 	DWORD m_systime;
@@ -153,22 +153,22 @@ private:
 	int m_fpsCount;
 
 	// State
-	MANAGER<cpu_fsm_base> m_fsms;
+	cpu_manager<cpu_fsm_base> m_fsms;
 
 	// Entity
-	MANAGER<ENTITY> m_entities;
+	cpu_manager<cpu_entity> m_entities;
 
 	// Particle
-	PARTICLE_DATA m_particleData;
-	PARTICLE_PHYSICS m_particlePhysics;
-	MANAGER<PARTICLE_EMITTER> m_particleEmitters;
+	cpu_particle_data m_particleData;
+	cpu_particle_physics m_particlePhysics;
+	cpu_manager<cpu_particle_emitter> m_particleEmitters;
 
 	// Sprite
-	MANAGER<SPRITE> m_sprites;
+	cpu_manager<cpu_sprite> m_sprites;
 };
 
 template <typename T>
-cpu_fsm<T>* Engine::CreateFSM(T* pInstance)
+cpu_fsm<T>* cpu_engine::CreateFSM(T* pInstance)
 {
 	cpu_fsm<T>* pFSM = new cpu_fsm<T>(pInstance);
 	m_fsms.Add((cpu_fsm_base*)pFSM);
@@ -176,7 +176,7 @@ cpu_fsm<T>* Engine::CreateFSM(T* pInstance)
 }
 
 template <typename T>
-void Engine::ReleaseFSM(cpu_fsm<T>* pFSM)
+void cpu_engine::ReleaseFSM(cpu_fsm<T>* pFSM)
 {
 	m_fsms.Release(pFSM);
 }
