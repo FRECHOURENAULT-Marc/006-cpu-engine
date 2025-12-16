@@ -26,31 +26,37 @@ struct cpu_particle_physics
 
 struct cpu_particle_data
 {
-	int maxCount = 0;
-	int alive = 0;
+	int maxCount;
+	int alive;
 
-	float* px = nullptr;
-	float* py = nullptr;
-	float* pz = nullptr;
+	void* blob;
+	int size;
 
-	float* vx = nullptr;
-	float* vy = nullptr;
-	float* vz = nullptr;
+	float* px;
+	float* py;
+	float* pz;
 
-	float* age  = nullptr;
-	float* duration = nullptr;
-	ui32* seed = nullptr;
+	float* vx;
+	float* vy;
+	float* vz;
 
-	float* r = nullptr;
-	float* g = nullptr;
-	float* b = nullptr;
+	float* age;
+	float* duration;
+	float* invDuration;
+	ui32* seed;
+
+	float* r;
+	float* g;
+	float* b;
 
 	cpu_particle_data();
 	~cpu_particle_data();
+	void Reset();
 
 	void Create(int maxP);
 	void Destroy();
 	void Update(float dt, const cpu_particle_physics& phys);
+	inline void ApplyBounds(float& px, float& py, float& pz, float& vx, float& vy, float& vz, const cpu_particle_physics& phys);
 };
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -64,10 +70,18 @@ struct cpu_particle_emitter
 	bool dead;
 
 	float rate; // particles/sec
-	float accum;
 	float durationMin;
 	float durationMax;
+	XMFLOAT3 pos;
+	XMFLOAT3 dir;
+	XMFLOAT3 color;
+	float speed;
 
+private:
+	float accum;
+
+public:
 	cpu_particle_emitter();
-	void Update(cpu_particle_data& p, float dt, float ox, float oy, float oz, float baseVx, float baseVy, float baseVz, float r, float g, float b);
+
+	void Update(cpu_particle_data& p, float dt);
 };

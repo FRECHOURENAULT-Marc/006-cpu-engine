@@ -2,8 +2,19 @@
 
 cpu_particle_physics::cpu_particle_physics()
 {
-	memset(this, 0, sizeof(cpu_particle_physics));
-	gy = -9.81f;
+	gx = 0.0f;
+	gy = -1.0f;
+	gz = 0.0f;
+	drag = 0.0f;
+	maxSpeed = 0.0f;
+	minX = 0.0f;
+	minY = 0.0f;
+	minZ = 0.0f;
+	maxX = 0.0f;
+	maxY = 0.0f;
+	maxZ = 0.0f;
+	useBounds = false;
+	bounce = 0.0f;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -12,7 +23,7 @@ cpu_particle_physics::cpu_particle_physics()
 
 cpu_particle_data::cpu_particle_data()
 {
-	memset(this, 0, sizeof(cpu_particle_data));
+	Reset();
 }
 
 cpu_particle_data::~cpu_particle_data()
@@ -20,48 +31,77 @@ cpu_particle_data::~cpu_particle_data()
 	Destroy();
 }
 
+void cpu_particle_data::Reset()
+{
+	maxCount = 0;
+	alive = 0;
+	blob = nullptr;
+	size = 0;
+	px = nullptr;
+	py = nullptr;
+	pz = nullptr;
+	vx = nullptr;
+	vy = nullptr;
+	vz = nullptr;
+	age = nullptr;
+	duration = nullptr;
+	seed = nullptr;
+	r = nullptr;
+	g = nullptr;
+	b = nullptr;
+}
+
 void cpu_particle_data::Create(int maxP)
 {
 	Destroy();
 	maxCount = maxP;
-	px = new float[maxP];
-	py = new float[maxP];
-	pz = new float[maxP];
-	vx = new float[maxP];
-	vy = new float[maxP];
-	vz = new float[maxP];
-	age = new float[maxP];
-	duration = new float[maxP];
-	seed = new ui32[maxP];
-	r = new float[maxP];
-	g = new float[maxP];
-	b = new float[maxP];
+
+	int countF = maxP * sizeof(float);
+	int countU = maxP * sizeof(ui32);
+	size	= 3 * countF   // px py pz
+			+ 3 * countF   // vx vy vz
+			+ 3 * countF   // age duration invDuration
+			+ 1 * countU   // seed
+			+ 3 * countF;  // r g b
+
+
+	blob = _aligned_malloc(size, 32); // SIMD: 32 or 64
+	byte* ptr = (byte*)blob;
+
+	px = (float*)ptr; ptr += countF;
+	py = (float*)ptr; ptr += countF;
+	pz = (float*)ptr; ptr += countF;
+
+	vx = (float*)ptr; ptr += countF;
+	vy = (float*)ptr; ptr += countF;
+	vz = (float*)ptr; ptr += countF;
+
+	age = (float*)ptr; ptr += countF;
+	duration = (float*)ptr; ptr += countF;
+	invDuration = (float*)ptr; ptr += countF;
+
+	seed = (ui32*)ptr; ptr += countU;
+
+	r = (float*)ptr; ptr += countF;
+	g = (float*)ptr; ptr += countF;
+	b = (float*)ptr; ptr += countF;
 }
 
 void cpu_particle_data::Destroy()
 {
-	delete [] px;
-	delete [] py;
-	delete [] pz;
-	delete [] vx;
-	delete [] vy;
-	delete [] vz;
-	delete [] age;
-	delete [] duration;
-	delete [] seed;
-	delete [] r;
-	delete [] g;
-	delete [] b;
-	memset(this, 0, sizeof(cpu_particle_data));
+	if ( blob )
+		_aligned_free(blob);
+	Reset();
 }
 
 void cpu_particle_data::Update(float dt, const cpu_particle_physics& phys)
 {
-	if ( dt<=0.0f || alive<=0 )
+	if ( alive<=0 )
 		return;
 
-	// Drag stable (approx exp(-k dt) sans expf)
-	const float dragFactor = phys.drag>0.0f ? 1.0f/(1.0f+phys.drag*dt) : 1.0f;
+	const float drag = phys.drag> 0.0f ? phys.drag : 0.0f;
+	const float dragFactor = drag>0.0f ? 1.0f/(1.0f+drag*dt) : 1.0f;
+	const float maxSpeed = phys.maxSpeed;
 
 	int i = 0;
 	while ( i<alive )
@@ -79,6 +119,7 @@ void cpu_particle_data::Update(float dt, const cpu_particle_physics& phys)
 			vz[i] = vz[last];
 			age[i] = age[last];
 			duration[i] = duration[last];
+			invDuration[i] = invDuration[last];
 			r[i] = r[last];
 			g[i] = g[last];
 			b[i] = b[last];
@@ -86,28 +127,32 @@ void cpu_particle_data::Update(float dt, const cpu_particle_physics& phys)
 			--alive;
 			continue;
 		}
+		
+		// Dissipe l'énergie
+		float x = vx[i] * dragFactor;
+		float y = vy[i] * dragFactor;
+		float z = vz[i] * dragFactor;
 
-		float x = vx[i] + phys.gx * dt;
-		float y = vy[i] + phys.gy * dt;
-		float z = vz[i] + phys.gz * dt;
+		// Gravity
+		x += phys.gx * dt;
+		y += phys.gy * dt;
+		z += phys.gz * dt;
 
-		x *= dragFactor;
-		y *= dragFactor;
-		z *= dragFactor;
-
-		if ( phys.maxSpeed>0.0f )
+		// Speed
+		if ( maxSpeed>0.0f )
 		{
 			const float v2 = x*x + y*y + z*z;
-			const float m2 = phys.maxSpeed * phys.maxSpeed;
+			const float m2 = maxSpeed * maxSpeed;
 			if ( v2>m2 )
 			{
-				const float invLen = phys.maxSpeed / sqrtf(v2);
+				const float invLen = maxSpeed / sqrtf(v2);
 				x *= invLen;
 				y *= invLen;
 				z *= invLen;
 			}
 		}
 
+		// Euler (semi-implicite)
 		px[i] += x * dt;
 		py[i] += y * dt;
 		pz[i] += z * dt;
@@ -115,19 +160,45 @@ void cpu_particle_data::Update(float dt, const cpu_particle_physics& phys)
 		vy[i] = y;
 		vz[i] = z;
 
+		// Bound
 		if ( phys.useBounds )
-		{
-			if ( px[i]<phys.minX ) { px[i] = phys.minX; vx[i] = -vx[i] * phys.bounce; }
-			if ( px[i]>phys.maxX ) { px[i] = phys.maxX; vx[i] = -vx[i] * phys.bounce; }
-
-			if ( py[i]<phys.minY) { py[i] = phys.minY; vy[i] = -vy[i] * phys.bounce; }
-			if ( py[i]>phys.maxY) { py[i] = phys.maxY; vy[i] = -vy[i] * phys.bounce; }
-
-			if ( pz[i]<phys.minZ) { pz[i] = phys.minZ; vz[i] = -vz[i] * phys.bounce; }
-			if ( pz[i]>phys.maxZ) { pz[i] = phys.maxZ; vz[i] = -vz[i] * phys.bounce; }
-		}
+			ApplyBounds(px[i], py[i], pz[i], vx[i], vy[i], vz[i], phys);
 
 		++i;
+	}
+}
+
+void cpu_particle_data::ApplyBounds(float& px, float& py, float& pz, float& vx, float& vy, float& vz, const cpu_particle_physics& phys)
+{
+	if ( px<phys.minX )
+	{
+		px = phys.minX;
+		vx = -vx * phys.bounce;
+	}
+	if ( px>phys.maxX )
+	{
+		px = phys.maxX;
+		vx = -vx * phys.bounce;
+	}
+	if ( py<phys.minY )
+	{
+		py = phys.minY;
+		vy = -vy * phys.bounce;
+	}
+	if ( py>phys.maxY )
+	{
+		py = phys.maxY;
+		vy = -vy * phys.bounce;
+	}
+	if ( pz<phys.minZ )
+	{
+		pz = phys.minZ;
+		vz = -vz * phys.bounce;
+	}
+	if ( pz>phys.maxZ )
+	{
+		pz = phys.maxZ;
+		vz = -vz * phys.bounce;
 	}
 }
 
@@ -142,13 +213,42 @@ cpu_particle_emitter::cpu_particle_emitter()
 	dead = false;
 
 	rate = 200.0f;
-	accum = 0.0f;
 	durationMin = 0.5f;
-	durationMax = 1.2f;
+	durationMax = 3.0f;
+	pos = ZERO;
+	dir = UP;
+	color = WHITE;
+	speed = 1.0f;
+
+	accum = 0.0f;
 };
 
-void cpu_particle_emitter::Update(cpu_particle_data& p, float dt, float ox, float oy, float oz, float baseVx, float baseVy, float baseVz, float r, float g, float b)
+void cpu_particle_emitter::Update(cpu_particle_data& p, float dt)
 {
+	// TODO: exposer les variables
+
+	const float spread = 0.5f;        // dispersion directionnelle
+	const float speedMin = 0.7f;       // variation de vitesse
+	const float speedMax = 1.3f;
+	const float spawnRadius = 0.05f;   // volume d'émission
+
+	XMFLOAT3 vel = dir;
+	vel.x *= speed;
+	vel.y *= speed;
+	vel.z *= speed;
+
+	float len = sqrtf(vel.x * vel.x + vel.y * vel.y + vel.z * vel.z);
+	if ( len<1e-6f )
+	{
+		vel.x = 0.0f;
+		vel.y = 1.0f;
+		vel.z = 0.0f;
+		len = 1.0f;
+	}
+	vel.x /= len;
+	vel.y /= len;
+	vel.z /= len;
+
 	accum += rate * dt;
 	int n = (int)accum;
 	accum -= (float)n;
@@ -159,21 +259,33 @@ void cpu_particle_emitter::Update(cpu_particle_data& p, float dt, float ox, floa
 
 		ui32 seed = (ui32)(i * 9781u + 0x9E3779B9u);
 
-		p.px[i] = ox;
-		p.py[i] = oy;
-		p.pz[i] = oz;
-		p.vx[i] = baseVx;
-		p.vy[i] = baseVy;
-		p.vz[i] = baseVz;
+		float rx = RandSigned(seed);
+		float ry = RandSigned(seed);
+		float rz = RandSigned(seed);
+		p.px[i] = pos.x + rx * spawnRadius;
+		p.py[i] = pos.y + ry * spawnRadius;
+		p.pz[i] = pos.z + rz * spawnRadius;
+
+		float dvx = RandSigned(seed) * spread;
+		float dvy = RandSigned(seed) * spread;
+		float dvz = RandSigned(seed) * spread;
+
+		float speed = speedMin + (speedMax - speedMin) * Rand01(seed);
+		p.vx[i] = (vel.x + dvx) * speed;
+		p.vy[i] = (vel.y + dvy) * speed;
+		p.vy[i] = (vel.y + dvy) * speed;
+		p.vz[i] = (vel.z + dvz) * speed;
 
 		p.age[i] = 0.0f;
 
 		float rand = Rand01(seed);
 		p.duration[i] = durationMin + (durationMax - durationMin) * rand;
+		p.invDuration[i] = 1.0f / p.duration[i];
 
-		p.r[i] = r;
-		p.g[i] = g;
-		p.b[i] = b;
+		p.r[i] = color.x;
+		p.g[i] = color.y;
+		p.b[i] = color.z;
+
 		p.seed[i] = seed;
 	}
 }

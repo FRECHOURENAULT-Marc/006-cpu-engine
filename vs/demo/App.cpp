@@ -84,6 +84,15 @@ void App::OnStart()
 	m_pShip = new Ship;
 	m_pShip->Create(&m_meshShip, &m_materialShip);
 	m_pShip->GetFSM()->ToState(ID(StateIdle));
+
+	// Particle
+	m_particleData.Create(1000000);
+	//m_particlePhysics.maxSpeed = 10.0f;
+	m_particlePhysics.gy = -0.5f;
+	m_pEmitter = CreateParticleEmitter();
+	m_pEmitter->rate = 10000.0f;
+	m_pEmitter->speed = 1.0f;
+	m_pEmitter->color = ToColor(192, 192, 255);
 }
 
 void App::OnUpdate()
@@ -98,9 +107,25 @@ void App::OnUpdate()
 
 	// Move rock
 	m_pRock->transform.OrbitAroundAxis(m_pBall->transform.pos, UP, 3.0f, m_totalTime*2.0f);
+	m_pEmitter->pos = m_pRock->transform.pos;
+	m_pEmitter->dir = m_pRock->transform.dir;
 
 	// Turn camera
 	m_camera.transform.AddYPR(0.0f, 0.0f, m_deltaTime*0.1f);
+
+	// Move ship
+	if ( input.IsKey(VK_UP) )
+	{
+		m_camera.transform.Move(dtime*1.0f);
+	}
+	if ( input.IsKey(VK_DOWN) )
+	{
+		m_camera.transform.Move(-dtime*1.0f);
+	}
+
+	// Fire
+	if ( input.IsKeyDown(VK_LBUTTON) || input.IsKey(VK_RBUTTON) )
+		I(App)->SpawnMissileWithMouse();
 
 	// Move missiles
 	for ( auto it=m_missiles.begin() ; it!=m_missiles.end() ; )
@@ -140,6 +165,7 @@ void App::OnPostRender()
 	info += std::to_string(m_statsClipEntityCount) + " clipped entities, ";
 	info += std::to_string(m_statsDrawnTriangleCount) + " triangles, ";
 	//info += std::to_string(m_statsDrawnTriangleCount) + "/" + std::to_string(GetTotalTriangleCount()) + " triangles, ";
+	info += std::to_string(m_particleData.alive) + " particles, ";
 	info += std::to_string(m_statsThreadCount) + " threads, ";
 	info += std::to_string(m_statsTileCount) + " tiles\n";
 	info += "(FIRE: space or left/right button)";
@@ -205,8 +231,6 @@ void Ship::Update()
 	// Fire
 	if ( input.IsKey(VK_SPACE) )
 		I(App)->SpawnMissile();
-	if ( input.IsKeyDown(VK_LBUTTON) || input.IsKey(VK_RBUTTON) )
-		I(App)->SpawnMissileWithMouse();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

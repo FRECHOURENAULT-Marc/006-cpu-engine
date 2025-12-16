@@ -135,6 +135,7 @@ void cpu_engine::Initialize(HINSTANCE hInstance, int renderWidth, int renderHeig
 	m_entityManager.Clear();
 	m_spriteManager.Clear();
 	m_particleManager.Clear();
+	m_fsmManager.Clear();
 	
 	// Tile
 #ifdef CONFIG_MT
@@ -573,6 +574,9 @@ void cpu_engine::Update()
 	// FSM
 	Update_FSM();
 
+	// Particles
+	Update_Particles();
+
 	// Callback
 	OnUpdate();
 
@@ -602,6 +606,22 @@ void cpu_engine::Update_FSM()
 
 		pFSM->Update(m_deltaTime);
 	}
+}
+
+void cpu_engine::Update_Particles()
+{
+	// Emitters
+	for ( int i=0 ; i<m_particleManager.count ; i++ )
+	{
+		cpu_particle_emitter* pEmitter = m_particleManager[i];
+		if ( pEmitter->dead )
+			continue;
+
+		pEmitter->Update(m_particleData, m_deltaTime);
+	}
+
+	// Particles
+	m_particleData.Update(m_deltaTime, m_particlePhysics);
 }
 
 void cpu_engine::Update_Purge()
@@ -647,6 +667,9 @@ void cpu_engine::Render()
 	for ( int i=0 ; i<m_threadCount ; i++ )
 		WaitForSingleObject(m_threads[i].m_hEventEnd, INFINITE);
 #endif
+
+	// Particles
+	Render_Particles(false);
 
 	// Stats
 	m_statsDrawnTriangleCount = 0;
@@ -792,6 +815,53 @@ void cpu_engine::Render_Tile(int iTile)
 #endif
 }
 
+void cpu_engine::Render_Particles(bool additiveNoAlpha, float brightness)
+{
+	if ( m_particleData.alive<=0 )
+		return;
+
+	for ( int i=0 ; i<m_particleData.alive ; ++i )
+	{
+		XMFLOAT4 clip;
+		XMStoreFloat4(&clip, XMVector4Transform(XMVectorSet(m_particleData.px[i], m_particleData.py[i], m_particleData.pz[i], 1.0f), XMLoadFloat4x4(&m_camera.matViewProj)));
+		if ( clip.w<=1e-6f )
+			continue;
+
+		const float invW = 1.0f / clip.w;
+		const float ndcX = clip.x * invW;   // [-1,1]
+		const float ndcY = clip.y * invW;   // [-1,1]
+		const float ndcZ = clip.z * invW;	// [0,1]
+		if ( ndcX<-1.0f || ndcX>1.0f || ndcY<-1.0f || ndcY>1.0f || ndcZ<0.0f || ndcZ>1.0f )
+			continue;
+
+		const int sx = (int)((ndcX + 1.0f) * m_renderWidthHalf);
+		const int sy = (int)((1.0f - ndcY) * m_renderHeightHalf);
+		const float sz = ndcZ;
+		if ( (int)sx>=m_renderWidth || (int)sy>=m_renderHeight )
+			continue;
+
+		const int idx = sy * m_renderWidth + sx;
+		if ( sz>=m_depthBuffer[idx] )
+			continue;
+		m_depthBuffer[idx] = sz;
+
+		float r = m_particleData.r[i] * brightness;
+		float g = m_particleData.g[i] * brightness;
+		float b = m_particleData.b[i] * brightness;
+		//float attn = 1.0f / (1.0f + 6.0f * sz); // tweak 6.0f
+		//float attn = 1.0f - (sz * sz);
+		//r *= attn;
+		//g *= attn;
+		//b *= attn;
+
+		ui32 color = ToRGB(r, g, b);
+		if ( additiveNoAlpha )
+			m_colorBuffer[idx] = SwapRB(AddSaturateRGBA(m_colorBuffer[idx], color));
+		else
+			m_colorBuffer[idx] = SwapRB(color);
+	}
+}
+
 void cpu_engine::Render_UI()
 {
 	for ( int iSprite=0 ; iSprite<m_spriteManager.count ; iSprite++ )
@@ -847,7 +917,7 @@ void cpu_engine::ClearSky()
 		{
 			float val = b * (float)y + c;
 			uint32_t col = val>0.0f ? sCol : gCol;
-			std::fill(m_colorBuffer.begin() + (y * m_renderWidth),  m_colorBuffer.begin() + ((y + 1) * m_renderWidth),  col);
+			std::fill(m_colorBuffer.begin() + (y * m_renderWidth),  m_colorBuffer.begin() + ((y + 1) * m_renderWidth), col);
 		}
 	}
 	else

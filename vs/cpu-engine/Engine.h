@@ -63,6 +63,7 @@ private:
 	void Update();
 	void Update_Physics();
 	void Update_FSM();
+	void Update_Particles();
 	void Update_Purge();
 
 	void Render();
@@ -71,6 +72,7 @@ private:
 	void Render_ApplyClipping();
 	void Render_PrepareTiles();
 	void Render_Tile(int iTile);
+	void Render_Particles(bool additiveNoAlpha, float brightness = 1.0f);
 	void Render_UI();
 
 	void Clear(XMFLOAT3& color);
@@ -106,6 +108,10 @@ protected:
 
 	// Camera
 	cpu_camera m_camera;
+
+	// Particle
+	cpu_particle_data m_particleData;
+	cpu_particle_physics m_particlePhysics;
 
 	// Stats: render
 	int m_statsClipEntityCount;
@@ -171,8 +177,6 @@ private:
 	cpu_manager<cpu_entity> m_entityManager;
 
 	// Particle
-	cpu_particle_data m_particleData;
-	cpu_particle_physics m_particlePhysics;
 	cpu_manager<cpu_particle_emitter> m_particleManager;
 
 	// Sprite
