@@ -2,5 +2,5 @@
 
 namespace png_lib
 {
-	uint8_t* parse_png_rgba(const uint8_t* data, size_t len, int* w, int* h);
+	byte* parse_png_rgba(const byte* data, size_t len, int* w, int* h);
 }

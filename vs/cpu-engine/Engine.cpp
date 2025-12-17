@@ -1267,7 +1267,7 @@ void cpu_engine::FillTriangle(cpu_drawcall& dc)
 	dc.pTile->statsDrawnTriangleCount++;
 }
 
-bool cpu_engine::Copy(byte* dst, int dstW, int dstH, int dstX, int dstY, const uint8_t* src, int srcW, int srcH, int srcX, int srcY, int w, int h)
+bool cpu_engine::Copy(byte* dst, int dstW, int dstH, int dstX, int dstY, const byte* src, int srcW, int srcH, int srcX, int srcY, int w, int h)
 {
 	if ( w<=0 || h<=0 )
 		return false;
@@ -1294,7 +1294,7 @@ bool cpu_engine::Copy(byte* dst, int dstW, int dstH, int dstX, int dstY, const u
 		const byte* s = srow;
 		for ( int x=0 ; x<w ; ++x )
 		{
-			const uint8_t sa = s[3];
+			const byte sa = s[3];
 			if ( sa==255 )
 			{
 				d[0] = s[2];

@@ -84,7 +84,7 @@ struct cpu_rt
 	int pixelCount;
 	float widthHalf;
 	float heightHalf;
-	std::vector<uint32_t> colorBuffer;
+	std::vector<ui32> colorBuffer;
 	bool depth;
 	std::vector<float> depthBuffer;
 
