@@ -3,7 +3,9 @@
 class cpu_engine
 {
 public:
-	friend cpu_thread_job;
+	friend cpu_job_entity;
+	friend cpu_job_particle_space;
+	friend cpu_job_particle_render;
 
 public:
 	cpu_engine();
@@ -27,6 +29,7 @@ public:
 	float GetDeltaTime() { return m_deltaTime; };
 	cpu_particle_data* GetParticleData() { return &m_particleData; }
 	cpu_particle_physics* GetParticlePhysics() { return &m_particlePhysics; }
+	int NextTile() { return m_nextTile.Add(); }
 
 	template <typename T>
 	cpu_fsm<T>* CreateFSM(T* pInstance);
@@ -75,9 +78,10 @@ private:
 	void Render_SortZ();
 	void Render_RecalculateMatrices();
 	void Render_ApplyClipping();
-	void Render_PrepareTiles();
-	void Render_Tile(int iTile);
-	void Render_Particles();
+	void Render_AssignEntityTile();
+	void Render_TileEntities(int iTile);
+	void Render_AssignParticleTile(int iTileForAssign);
+	void Render_TileParticles(int iTile);
 	void Render_UI();
 
 	void Clear(XMFLOAT3& color);
@@ -127,10 +131,12 @@ protected:
 private:
 	inline static cpu_engine* s_pEngine;
 
-	// cpu_thread
+	// Jobs
 	int m_threadCount;
-	cpu_thread_job* m_threads;
-	std::atomic<int> m_nextTile;
+	std::vector<cpu_job_entity> m_entityJobs;
+	std::vector<cpu_job_particle_space> m_particleSpaceJobs;
+	std::vector<cpu_job_particle_render> m_particleRenderJobs;
+	cpu_atomic<int> m_nextTile;
 
 	// Window
 	HINSTANCE m_hInstance;

@@ -87,12 +87,14 @@ using PS_FUNC							= void(*)(cpu_ps_io& data);
 #endif
 
 // Macro
-#define DELPTR(p)						{ if ( (p) ) { delete (p); (p) = nullptr; } }
 #define RELPTR(p)						{ if ( (p) ) { (p)->Release(); (p) = nullptr; } }
+#define DELPTR(p)						{ if ( (p) ) { delete (p); (p) = nullptr; } }
+#define DELPTRS(p)						{ if ( (p) ) { delete [] (p); (p) = nullptr; } }
 #define I(p)							p::GetInstance()
 #define CAPTION(v)						SetWindowText(cpu.GetHWND(), std::to_string(v).c_str());
 #define ID(s)							GetStateID<s>()
 #define RGBA(r,g,b,a)					((ui32)(((byte)(r)|((ui16)((byte)(g))<<8))|(((ui16)(byte)(b))<<16))|(((ui32)(byte)(a))<<24))
+#define JOBS(j)							{m_nextTile=0;for(size_t i=0;i<(j).size();i++)(j)[i].PostStartEvent();for(size_t i=0;i<(j).size();i++)(j)[i].WaitEndEvent();}
 
 // Special
 #define cpu								cpu_engine::GetInstanceRef()

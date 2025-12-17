@@ -49,6 +49,13 @@ struct cpu_particle_data
 	float* g;
 	float* b;
 
+	// Render
+	ui32* tile;
+	ui32* sort;
+	ui16* sx;
+	ui16* sy;
+	float* sz;
+
 	cpu_particle_data();
 	~cpu_particle_data();
 	void Reset();

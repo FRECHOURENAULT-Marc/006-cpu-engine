@@ -10,10 +10,5 @@
 	#define CONFIG_MT
 #endif
 
-// Enable CONFIG_MT_DEBUG if you want to check Multi-Threading
-#ifdef CONFIG_MT
-	//#define CONFIG_MT_DEBUG
-#endif
-
 // Enable CONFIG_WIREFRAME if you want to draw edges for debugging
 //#define CONFIG_WIREFRAME

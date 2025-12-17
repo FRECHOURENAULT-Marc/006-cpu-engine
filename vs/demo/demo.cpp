@@ -6,8 +6,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int cmdShow)
 	{
 		App app;
 		//app.Initialize(hInstance, 320, 200, 5.0f);		// AMIGA NTSC
-		app.Initialize(hInstance, 512, 288, 4.0f);
-		//app.Initialize(hInstance, 1280, 800);
+		//app.Initialize(hInstance, 512, 288, 4.0f);
+		app.Initialize(hInstance, 1024, 576);
 		app.Run();
 	}
 	UninitializeEngine();

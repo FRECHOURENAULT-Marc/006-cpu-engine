@@ -5,7 +5,6 @@ cpu_engine::cpu_engine()
 	s_pEngine = this;
 	m_hInstance = nullptr;
 	m_hWnd = nullptr;
-	m_threads = nullptr;
 
 #ifdef CONFIG_GPU
 	m_pD2DFactory = nullptr;
@@ -32,15 +31,10 @@ void cpu_engine::Free()
 	if ( m_hInstance==nullptr )
 		return;
 
-	// cpu_thread
-	for ( int i=0 ; i<m_threadCount ; i++ )
-	{
-		cpu_thread_job& thread = m_threads[i];
-		CloseHandle(thread.m_hEventStart);
-		CloseHandle(thread.m_hEventEnd);
-	}
-	delete [] m_threads;
-	m_threads = nullptr;
+	// Jobs
+	m_entityJobs.clear();
+	m_particleSpaceJobs.clear();
+	m_particleRenderJobs.clear();
 	
 	// Surface
 #ifdef CONFIG_GPU
@@ -169,18 +163,20 @@ void cpu_engine::Initialize(HINSTANCE hInstance, int renderWidth, int renderHeig
 				tile.bottom += missingHeight;
 			if ( col==m_tileColCount-1 )
 				tile.right += missingWidth;
+			tile.particleLocalCounts.resize(m_tileCount);
 			m_tiles.push_back(tile);
 		}
 	}
 
-	// cpu_thread
-	m_threads = new cpu_thread_job[m_threadCount];
+	// Jobs
+	m_entityJobs.resize(m_threadCount);
+	m_particleSpaceJobs.resize(m_threadCount);
+	m_particleRenderJobs.resize(m_threadCount);
 	for ( int i=0 ; i<m_threadCount ; i++ )
 	{
-		cpu_thread_job& thread = m_threads[i];
-		thread.m_count = m_tileCount;
-		thread.m_hEventStart = CreateEvent(nullptr, FALSE, FALSE, nullptr);
-		thread.m_hEventEnd = CreateEvent(nullptr, FALSE, FALSE, nullptr);
+		m_entityJobs[i].Create(m_tileCount);
+		m_particleSpaceJobs[i].Create(m_tileCount);
+		m_particleRenderJobs[i].Create(m_tileCount);
 	}
 
 	// Window
@@ -202,9 +198,13 @@ void cpu_engine::Run()
 	m_fps = 0;
 	OnStart();
 
-	// cpu_thread
+	// Jobs
 	for ( int i=0 ; i<m_threadCount ; i++ )
-		m_threads[i].Run();
+	{
+		m_entityJobs[i].Run();
+		m_particleSpaceJobs[i].Run();
+		m_particleRenderJobs[i].Run();
+	}
 
 	// Loop
 	MSG msg = {};
@@ -230,13 +230,13 @@ void cpu_engine::Run()
 		Render();
 	}
 
-	// cpu_thread
+	// Jobs
 	for ( int i=0 ; i<m_threadCount ; i++ )
-		m_threads[i].m_quitRequest = true;
-	for ( int i=0 ; i<m_threadCount ; i++ )
-		SetEvent(m_threads[i].m_hEventStart);
-	for ( int i=0 ; i<m_threadCount ; i++ )
-		m_threads[i].Wait();
+	{
+		m_entityJobs[i].PostQuit();
+		m_particleSpaceJobs[i].PostQuit();
+		m_particleRenderJobs[i].PostQuit();
+	}
 
 	// End
 	OnExit();
@@ -655,12 +655,16 @@ void cpu_engine::Render()
 	// RT
 	m_pRT = &m_rt;
 
+	// Tiles
+	for ( int i=0 ; i<m_tileCount ; i++ )
+		m_tiles[i].Reset();
+
 	// Prepare
 	m_camera.Update();
 	Render_SortZ();
 	Render_RecalculateMatrices();
 	Render_ApplyClipping();
-	Render_PrepareTiles();
+	Render_AssignEntityTile();
 
 	// Background
 	if ( m_sky )
@@ -672,21 +676,31 @@ void cpu_engine::Render()
 	OnPreRender();
 
 	// Entities
-#ifdef CONFIG_MT_DEBUG
-	for ( int i=0 ; i<m_threadCount ; i++ )
-	{
-		SetEvent(m_threads[i].m_hEventStart);
-		WaitForSingleObject(m_threads[i].m_hEventEnd, INFINITE);
-	}
-#else
-	for ( int i=0 ; i<m_threadCount ; i++ )
-		SetEvent(m_threads[i].m_hEventStart);
-	for ( int i=0 ; i<m_threadCount ; i++ )
-		WaitForSingleObject(m_threads[i].m_hEventEnd, INFINITE);
-#endif
+	JOBS(m_entityJobs);
 
 	// Particles
-	Render_Particles();
+	memset(m_particleData.tile, 0, m_particleData.alive*sizeof(ui32));
+	JOBS(m_particleSpaceJobs);
+	for ( int i=0 ; i<m_tileCount ; i++ )
+	{
+		for ( int j=0 ; j<m_tileCount ; j++ )
+			m_tiles[i].particleCount += m_tiles[j].particleLocalCounts[i];
+		if ( i>0 )
+		{
+			m_tiles[i].particleOffset = m_tiles[i-1].particleOffset + m_tiles[i-1].particleCount;
+			m_tiles[i].particleOffsetTemp = m_tiles[i].particleOffset;
+		}
+	}
+	for ( int i=0 ; i<m_particleData.alive ; i++ )
+	{
+		ui32 index = m_particleData.tile[i];
+		if ( index )
+		{
+			cpu_tile& tile = m_tiles[index-1];
+			m_particleData.sort[tile.particleOffsetTemp++] = i;
+		}
+	}
+	JOBS(m_particleRenderJobs);
 
 	// Stats
 	m_statsDrawnTriangleCount = 0;
@@ -701,11 +715,6 @@ void cpu_engine::Render()
 
 	// Present
 	Present();
-
-	// MT
-#ifdef CONFIG_MT_DEBUG
-	Sleep(1000);
-#endif
 }
 
 void cpu_engine::Render_SortZ()
@@ -763,6 +772,7 @@ void cpu_engine::Render_RecalculateMatrices()
 void cpu_engine::Render_ApplyClipping()
 {
 	m_statsClipEntityCount = 0;
+
 	for ( int iEntity=0 ; iEntity<m_entityManager.count ; iEntity++ )
 	{
 		cpu_entity* pEntity = m_entityManager[iEntity];
@@ -781,12 +791,8 @@ void cpu_engine::Render_ApplyClipping()
 	}
 }
 
-void cpu_engine::Render_PrepareTiles()
+void cpu_engine::Render_AssignEntityTile()
 {
-	// Reset
-	m_nextTile = 0;
-
-	// Entities
 	for ( int iEntity=0 ; iEntity<m_entityManager.count ; iEntity++ )
 	{
 		cpu_entity* pEntity = m_entityManager[iEntity];
@@ -810,7 +816,7 @@ void cpu_engine::Render_PrepareTiles()
 	}
 }
 
-void cpu_engine::Render_Tile(int iTile)
+void cpu_engine::Render_TileEntities(int iTile)
 {
 	cpu_tile& tile = m_tiles[iTile];
 	tile.statsDrawnTriangleCount = 0;
@@ -826,29 +832,29 @@ void cpu_engine::Render_Tile(int iTile)
 
 		DrawEntity(pEntity, tile);
 	}
-
-#ifdef CONFIG_MT_DEBUG
-	DrawRectangle(tile.left, tile.top, tile.right-tile.left, tile.bottom-tile.top, WHITE);
-#endif
 }
 
-void cpu_engine::Render_Particles()
+void cpu_engine::Render_AssignParticleTile(int iTileForAssign)
 {
-	if ( m_particleData.alive<=0 )
-		return;
+	cpu_tile& tile = m_tiles[iTileForAssign];
 
-	XMFLOAT4X4& m = m_camera.matViewProj;
-	for ( int i=0 ; i<m_particleData.alive ; ++i )
+	int count = m_particleData.alive / m_tileCount;
+	int remainder = m_particleData.alive % m_tileCount;
+	int iStart = iTileForAssign * count + std::min(iTileForAssign, remainder);
+	int iMax = iStart + count + (iTileForAssign<remainder ? 1 : 0);
+
+	XMFLOAT4X4& vp = m_camera.matViewProj;
+	for ( int i=iStart ; i<iMax ; i++ )
 	{
 		float x = m_particleData.px[i];
 		float y = m_particleData.py[i];
 		float z = m_particleData.pz[i];
-		float cw = x*m._14 + y*m._24 + z*m._34 + m._44;
+		float cw = x*vp._14 + y*vp._24 + z*vp._34 + vp._44;
 		if ( cw<=1e-6f )
 			continue;
-		float cx = x*m._11 + y*m._21 + z*m._31 + m._41;
-		float cy = x*m._12 + y*m._22 + z*m._32 + m._42;
-		float cz = x*m._13 + y*m._23 + z*m._33 + m._43;
+		float cx = x*vp._11 + y*vp._21 + z*vp._31 + vp._41;
+		float cy = x*vp._12 + y*vp._22 + z*vp._32 + vp._42;
+		float cz = x*vp._13 + y*vp._23 + z*vp._33 + vp._43;
 
 		const float invW = 1.0f / cw;
 		const float ndcX = cx * invW;
@@ -863,23 +869,45 @@ void cpu_engine::Render_Particles()
 
 		const int sx = (int)((ndcX + 1.0f) * m_rt.widthHalf);
 		const int sy = (int)((1.0f - ndcY) * m_rt.heightHalf);
-		const float sz = ndcZ;
 		if ( sx<0 || sy<0 || sx>=m_rt.width || sy>=m_rt.height )
 			continue;
 
-		const int idx = sy * m_rt.width + sx;
-		if ( sz>=m_rt.depthBuffer[idx] )
+		int iTile = (sy/m_tileHeight)*m_tileColCount + sx/m_tileWidth;
+		m_particleData.tile[i] = iTile + 1;
+		m_particleData.sx[i] = (ui16)sx;
+		m_particleData.sy[i] = (ui16)sy;
+		m_particleData.sz[i] = ndcZ;
+		tile.particleLocalCounts[iTile]++;
+	}
+}
+
+void cpu_engine::Render_TileParticles(int iTile)
+{
+	cpu_tile& tile = m_tiles[iTile];
+	if ( tile.particleCount==0 )
+		return;
+
+	const int offset = tile.particleOffset;
+	for ( int i=0 ; i<tile.particleCount ; ++i )
+	{
+		const int p = m_particleData.sort[offset+i];
+		const int sx = m_particleData.sx[p];
+		const int sy = m_particleData.sy[p];
+		const float sz = m_particleData.sz[p];
+		const int pix = sy * m_rt.width + sx;
+
+		if ( sz>=m_rt.depthBuffer[pix] )
 			continue;
-		m_rt.depthBuffer[idx] = sz;
+		m_rt.depthBuffer[pix] = sz;
 
 		float a = 1.0f - m_particleData.age[i] * m_particleData.invDuration[i];
 		a *= a;
 
-		XMFLOAT3 dst = ToColorFromBGR(m_rt.colorBuffer[idx]);
+		XMFLOAT3 dst = ToColorFromBGR(m_rt.colorBuffer[pix]);
 		float r = dst.x + m_particleData.r[i]*a;
 		float g = dst.y + m_particleData.g[i]*a;
 		float b = dst.z + m_particleData.b[i]*a;
-		m_rt.colorBuffer[idx] = ToBGR(r, g, b);
+		m_rt.colorBuffer[pix] = ToBGR(r, g, b);
 	}
 }
 
