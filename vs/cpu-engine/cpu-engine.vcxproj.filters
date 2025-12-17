@@ -62,6 +62,9 @@
     <ClInclude Include="config.h">
       <Filter>Library</Filter>
     </ClInclude>
+    <ClInclude Include="avx2.h">
+      <Filter>Core</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Thread.cpp">
@@ -104,6 +107,9 @@
       <Filter>Engine</Filter>
     </ClCompile>
     <ClCompile Include="png32.cpp">
+      <Filter>Core</Filter>
+    </ClCompile>
+    <ClCompile Include="avx2.cpp">
       <Filter>Core</Filter>
     </ClCompile>
   </ItemGroup>

@@ -19,22 +19,27 @@ public:
 	void FixProjection();
 	void FixDevice();
 	HWND GetHWND() { return m_hWnd; }
-	int GetWidth() { return m_renderWidth; }
-	int GetHeight() { return m_renderWidth; }
+	cpu_rt* GetMainRT() { return &m_rt; }
+	cpu_rt* SetRT(cpu_rt* pRT) { cpu_rt* pOld = m_pRT; m_pRT = pRT; return pOld; }
+	cpu_rt* GetRT() { return m_pRT; }
 	cpu_input& GetInput() { return m_input; }
 	float GetTotalTime() { return m_totalTime; }
 	float GetDeltaTime() { return m_deltaTime; };
+	cpu_particle_data* GetParticleData() { return &m_particleData; }
+	cpu_particle_physics* GetParticlePhysics() { return &m_particlePhysics; }
 
 	template <typename T>
 	cpu_fsm<T>* CreateFSM(T* pInstance);
 	cpu_entity* CreateEntity();
 	cpu_sprite* CreateSprite();
 	cpu_particle_emitter* CreateParticleEmitter();
+	cpu_rt* CreateRT(bool depth = true);
 	template <typename T>
-	cpu_fsm<T>* ReleaseFSM(cpu_fsm<T>* pFSM);
-	cpu_entity* ReleaseEntity(cpu_entity* pEntity);
-	cpu_sprite* ReleaseSprite(cpu_sprite* pSprite);
-	cpu_particle_emitter* ReleaseParticleEmitter(cpu_particle_emitter* pEmitter);
+	cpu_fsm<T>* Release(cpu_fsm<T>* pFSM);
+	cpu_entity* Release(cpu_entity* pEntity);
+	cpu_sprite* Release(cpu_sprite* pSprite);
+	cpu_particle_emitter* Release(cpu_particle_emitter* pEmitter);
+	cpu_rt* Release(cpu_rt* pRT);
 
 	void GetCursor(XMFLOAT2& pt);
 	cpu_ray GetCameraRay(XMFLOAT2& pt);
@@ -145,14 +150,8 @@ private:
 #endif
 
 	// Buffer
-	cpu_rendertarget m_rt;
-	int m_renderWidth;
-	int m_renderHeight;
-	int m_renderPixelCount;
-	float m_renderWidthHalf;
-	float m_renderHeightHalf;
-	std::vector<uint32_t> m_colorBuffer;
-	std::vector<float> m_depthBuffer;
+	cpu_rt m_rt;
+	cpu_rt* m_pRT;
 
 	// Camera
 	bool m_cullFrontCCW = false; // DirectX default
@@ -171,17 +170,12 @@ private:
 	DWORD m_fpsTime;
 	int m_fpsCount;
 
-	// State
+	// Managers
 	cpu_manager<cpu_fsm_base> m_fsmManager;
-
-	// Entity
 	cpu_manager<cpu_entity> m_entityManager;
-
-	// Particle
 	cpu_manager<cpu_particle_emitter> m_particleManager;
-
-	// Sprite
 	cpu_manager<cpu_sprite> m_spriteManager;
+	cpu_manager<cpu_rt> m_rtManager;
 };
 
 template <typename T>
@@ -193,7 +187,7 @@ cpu_fsm<T>* cpu_engine::CreateFSM(T* pInstance)
 }
 
 template <typename T>
-cpu_fsm<T>* cpu_engine::ReleaseFSM(cpu_fsm<T>* pFSM)
+cpu_fsm<T>* cpu_engine::Release(cpu_fsm<T>* pFSM)
 {
 	m_fsmManager.Release(pFSM);
 	return nullptr;

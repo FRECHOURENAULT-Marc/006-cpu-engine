@@ -27,9 +27,13 @@
 #include <map>
 #include <thread>
 #include <functional>
+#include <cmath>
+#include <immintrin.h> // AVX2
 #ifdef _DEBUG
 	#include <crtdbg.h>
 #endif
+//#include <cstdint>
+
 
 // Config
 ///////////
@@ -88,6 +92,7 @@ using PS_FUNC							= void(*)(cpu_ps_io& data);
 #define I(p)							p::GetInstance()
 #define CAPTION(v)						SetWindowText(cpu.GetHWND(), std::to_string(v).c_str());
 #define ID(s)							GetStateID<s>()
+#define RGBA(r,g,b,a)					((ui32)(((byte)(r)|((ui16)((byte)(g))<<8))|(((ui16)(byte)(b))<<16))|(((ui32)(byte)(a))<<24))
 
 // Special
 #define cpu								cpu_engine::GetInstanceRef()
@@ -125,6 +130,7 @@ inline XMFLOAT3 ORANGE					= { 1.0f, 0.5f, 0.0f };
 
 // Core
 #include "png32.h"
+#include "avx2.h"
 #include "global.h"
 #include "Input.h"
 #include "Thread.h"
@@ -139,4 +145,3 @@ inline XMFLOAT3 ORANGE					= { 1.0f, 0.5f, 0.0f };
 #include "Entity.h"
 #include "Multithreading.h"
 #include "Engine.h"
-

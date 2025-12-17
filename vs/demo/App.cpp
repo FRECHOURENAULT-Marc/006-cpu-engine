@@ -49,7 +49,7 @@ void App::OnStart()
 	// YOUR CODE HERE
 
 	// Resources
-	m_font.Create(18);
+	m_font.Create(18-6);
 	m_texture.Load("bird_amiga.png");
 	m_meshShip.CreateSpaceship();
 	m_meshMissile.CreateSphere(0.5f);
@@ -89,7 +89,7 @@ void App::OnStart()
 	m_particleData.Create(1000000);
 	m_particlePhysics.gy = -0.5f;
 	m_pEmitter = CreateParticleEmitter();
-	m_pEmitter->rate = 100000.0f;
+	m_pEmitter->density = 1000.0f;
 	m_pEmitter->colorMin = ToColor(192, 192, 255);
 	m_pEmitter->colorMax = ToColor(255, 192, 192);
 }
@@ -137,7 +137,7 @@ void App::OnUpdate()
 		if ( pMissile->lifetime>10.0f )
 		{
 			it = m_missiles.erase(it);
-			ReleaseEntity(pMissile);
+			Release(pMissile);
 		}
 		else
 			++it;
@@ -163,15 +163,13 @@ void App::OnPostRender()
 
 	// Debug
 	std::string info = std::to_string(m_fps) + " fps, ";
-	info += std::to_string(m_missiles.size()) + " missiles, ";
-	info += std::to_string(m_statsClipEntityCount) + " clipped entities, ";
 	info += std::to_string(m_statsDrawnTriangleCount) + " triangles, ";
-	//info += std::to_string(m_statsDrawnTriangleCount) + "/" + std::to_string(GetTotalTriangleCount()) + " triangles, ";
+	info += std::to_string(m_statsClipEntityCount) + " clipped entities\n";
+	info += std::to_string(m_missiles.size()) + " missiles, ";
 	info += std::to_string(m_particleData.alive) + " particles, ";
 	info += std::to_string(m_statsThreadCount) + " threads, ";
-	info += std::to_string(m_statsTileCount) + " tiles\n";
-	info += "(FIRE: space or left/right button)";
-	DrawText(&m_font, info.c_str(), GetWidth()/2, 10, TEXT_CENTER);
+	info += std::to_string(m_statsTileCount) + " tiles";
+	DrawText(&m_font, info.c_str(), (int)GetMainRT()->widthHalf, 10, TEXT_CENTER);
 }
 
 void App::MissileShader(cpu_ps_io& io)
@@ -218,8 +216,8 @@ void Ship::Create(cpu_mesh* pMesh, cpu_material* pMaterial)
 
 void Ship::Destroy()
 {
-	m_pFSM = cpu.ReleaseFSM(m_pFSM);
-	m_pEntity = cpu.ReleaseEntity(m_pEntity);
+	m_pFSM = cpu.Release(m_pFSM);
+	m_pEntity = cpu.Release(m_pEntity);
 }
 
 void Ship::Update()

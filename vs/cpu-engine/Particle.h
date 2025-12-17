@@ -43,7 +43,7 @@ struct cpu_particle_data
 	float* age;
 	float* duration;
 	float* invDuration;
-	ui32* seed;
+	//ui32* seed;
 
 	float* r;
 	float* g;
@@ -69,17 +69,22 @@ struct cpu_particle_emitter
 	int sortedIndex;
 	bool dead;
 
-	float rate;				// particles/sec
-	float durationMin;		// duration range
-	float durationMax;		// duration range
+	float density;			// particles / second / pixel²
+	float spawnRadius;		// volume d'émission
+
 	XMFLOAT3 pos;			// world position
 	XMFLOAT3 dir;			// normalized direction
 	XMFLOAT3 colorMin;		// color range
 	XMFLOAT3 colorMax;		// color range
-	float spread;			// dispersion directionnelle
+	float durationMin;		// duration range
+	float durationMax;		// duration range
 	float speedMin;			// speed range
 	float speedMax;			// speed range
-	float spawnRadius;		// volume d'émission
+	float spread;			// dispersion directionnelles
+							// 0		=> jet laser, pluie parfaitement verticale, rayon
+							// 0.05-0.2 => fumée canalisée, vapeur, souffle
+							// 0.3-0.7	=> feu, poussière, étincelles
+							// >1		=> explosion, chaos
 
 private:
 	float accum;
@@ -87,5 +92,5 @@ private:
 public:
 	cpu_particle_emitter();
 
-	void Update(cpu_particle_data& p, float dt);
+	void Update();
 };

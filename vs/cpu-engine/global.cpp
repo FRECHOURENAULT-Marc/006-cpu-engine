@@ -65,6 +65,15 @@ ui32 ToBGR(float r, float g, float b)
 	return RGB(red, green, blue);
 }
 
+ui32 ToBGRA(int r, int g, int b, int a)
+{
+	int red = Clamp(b, 0, 255);
+	int green = Clamp(g, 0, 255);
+	int blue = Clamp(r, 0, 255);
+	int alpha = Clamp(a, 0, 255);
+	return RGBA(red, green, blue, alpha);
+}
+
 XMFLOAT3 ToColor(int r, int g, int b)
 {
 	XMFLOAT3 color;
@@ -241,4 +250,36 @@ byte* LoadFile(const char* path, int& size)
 	}
 	fclose(file);
 	return data;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void StretchNearest_BGRX(const byte* src, int srcW, int srcH, byte* dst, int dstW, int dstH)
+{
+    if (!src || !dst || srcW <= 0 || srcH <= 0 || dstW <= 0 || dstH <= 0)
+		return;
+
+    const int srcPitch = srcW * 4;
+    const int dstPitch = dstW * 4;
+
+    // 16.16 fixed-point steps
+    const uint32_t stepX = (uint32_t)(((uint64_t)srcW << 16) / (uint32_t)dstW);
+    const uint32_t stepY = (uint32_t)(((uint64_t)srcH << 16) / (uint32_t)dstH);
+
+    for (int y = 0; y < dstH; ++y)
+    {
+        const int sy = Clamp((int)(((uint64_t)y * stepY) >> 16), 0, srcH - 1);
+        const uint32_t* sRow = (const uint32_t*)(src + sy * srcPitch);
+        uint32_t* dRow = (uint32_t*)(dst + y * dstPitch);
+
+        uint32_t fx = 0;
+        for (int x = 0; x < dstW; ++x)
+        {
+            const int sx = Clamp((int)(fx >> 16), 0, srcW - 1);
+            dRow[x] = sRow[sx];
+            fx += stepX;
+        }
+    }
 }
