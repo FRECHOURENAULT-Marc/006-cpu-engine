@@ -94,11 +94,13 @@ void cpu_particle_data::Destroy()
 	Reset();
 }
 
-void cpu_particle_data::Update(float dt, const cpu_particle_physics& phys)
+void cpu_particle_data::Update()
 {
 	if ( alive<=0 )
 		return;
 
+	const float dt = dtime;
+	cpu_particle_physics& phys = *cpu.GetParticlePhysics();
 	const float drag = phys.drag> 0.0f ? phys.drag : 0.0f;
 	const float dragFactor = drag>0.0f ? 1.0f/(1.0f+drag*dt) : 1.0f;
 	const float maxSpeed = phys.maxSpeed;

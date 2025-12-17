@@ -635,7 +635,7 @@ void cpu_engine::Update_Particles()
 	}
 
 	// Particles
-	m_particleData.Update(m_deltaTime, m_particlePhysics);
+	m_particleData.Update();
 }
 
 void cpu_engine::Update_Purge()
@@ -837,21 +837,27 @@ void cpu_engine::Render_Particles()
 	if ( m_particleData.alive<=0 )
 		return;
 
+	XMFLOAT4X4& m = m_camera.matViewProj;
 	for ( int i=0 ; i<m_particleData.alive ; ++i )
 	{
-		XMFLOAT4 clip;
-		XMStoreFloat4(&clip, XMVector4Transform(XMVectorSet(m_particleData.px[i], m_particleData.py[i], m_particleData.pz[i], 1.0f), XMLoadFloat4x4(&m_camera.matViewProj)));
-		if ( clip.w<=1e-6f )
+		float x = m_particleData.px[i];
+		float y = m_particleData.py[i];
+		float z = m_particleData.pz[i];
+		float cw = x*m._14 + y*m._24 + z*m._34 + m._44;
+		if ( cw<=1e-6f )
 			continue;
+		float cx = x*m._11 + y*m._21 + z*m._31 + m._41;
+		float cy = x*m._12 + y*m._22 + z*m._32 + m._42;
+		float cz = x*m._13 + y*m._23 + z*m._33 + m._43;
 
-		const float invW = 1.0f / clip.w;
-		const float ndcX = clip.x * invW;
+		const float invW = 1.0f / cw;
+		const float ndcX = cx * invW;
 		if ( ndcX<-1.0f || ndcX>1.0f )
 			continue;
-		const float ndcY = clip.y * invW;
+		const float ndcY = cy * invW;
 		if ( ndcY<-1.0f || ndcY>1.0f )
 			continue;
-		const float ndcZ = clip.z * invW;
+		const float ndcZ = cz * invW;
 		if ( ndcZ<0.0f || ndcZ>1.0f )
 			continue;
 

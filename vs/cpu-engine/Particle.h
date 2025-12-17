@@ -55,7 +55,7 @@ struct cpu_particle_data
 
 	void Create(int maxP);
 	void Destroy();
-	void Update(float dt, const cpu_particle_physics& phys);
+	void Update();
 	inline void ApplyBounds(float& px, float& py, float& pz, float& vx, float& vy, float& vz, const cpu_particle_physics& phys);
 };
 
