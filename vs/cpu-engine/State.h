@@ -1,12 +1,8 @@
 #pragma once
 
-struct cpu_fsm_base
+struct cpu_fsm_base : public cpu_object
 {
 	friend cpu_engine;
-
-	bool dead;
-	int index;
-	int sortedIndex;
 
 	int state;
 	float globalTotalTime;

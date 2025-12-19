@@ -28,11 +28,10 @@
 #include <thread>
 #include <functional>
 #include <cmath>
-#include <immintrin.h> // AVX2
+//#include <immintrin.h> // AVX2
 #ifdef _DEBUG
 	#include <crtdbg.h>
 #endif
-//#include <cstdint>
 
 
 // Config
@@ -137,25 +136,24 @@ inline XMFLOAT3 ORANGE					= { 1.0f, 0.5f, 0.0f };
 
 // Clear
 #define CLEAR_NONE						0
-#define CLEAR_TRANSPARENT				1
-#define CLEAR_COLOR						2
-#define CLEAR_SKY						3
+#define CLEAR_COLOR						1
+#define CLEAR_SKY						2
 
 // Depth
 #define DEPTH_READ						1
 #define DEPTH_WRITE						2
 
 // Core
+#include "simd.h"
 #include "png32.h"
-#include "avx2.h"
 #include "global.h"
 #include "Input.h"
 #include "Thread.h"
 
 // Engine
+#include "Manager.h"
 #include "State.h"
 #include "UI.h"
-#include "Font.h"
 #include "Particle.h"
 #include "Geometry.h"
 #include "Shader.h"

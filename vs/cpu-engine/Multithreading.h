@@ -5,7 +5,7 @@ struct cpu_atomic
 {
 public:
 	void operator=(const T& v) { val = v; }
-	T Add() { return val.fetch_add(1, std::memory_order_relaxed); }
+	T AddOne() { return val.fetch_add(1, std::memory_order_relaxed); }
 
 private:
 	std::atomic<T> val;

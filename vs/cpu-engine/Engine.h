@@ -29,7 +29,7 @@ public:
 	float GetDeltaTime() { return m_deltaTime; };
 	cpu_particle_data* GetParticleData() { return &m_particleData; }
 	cpu_particle_physics* GetParticlePhysics() { return &m_particlePhysics; }
-	int NextTile() { return m_nextTile.Add(); }
+	int NextTile() { return m_nextTile.AddOne(); }
 
 	template <typename T>
 	cpu_fsm<T>* CreateFSM(T* pInstance);

@@ -78,15 +78,15 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="avx2.h" />
+    <ClInclude Include="simd.h" />
     <ClInclude Include="config.h" />
     <ClInclude Include="cpu.h" />
     <ClInclude Include="Engine.h" />
     <ClInclude Include="Entity.h" />
-    <ClInclude Include="Font.h" />
     <ClInclude Include="Geometry.h" />
     <ClInclude Include="global.h" />
     <ClInclude Include="Input.h" />
+    <ClInclude Include="Manager.h" />
     <ClInclude Include="Multithreading.h" />
     <ClInclude Include="Particle.h" />
     <ClInclude Include="png32.h" />
@@ -97,16 +97,16 @@
     <ClInclude Include="UI.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="avx2.cpp" />
+    <ClCompile Include="simd.cpp" />
     <ClCompile Include="Engine.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Use</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Use</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="Entity.cpp" />
-    <ClCompile Include="Font.cpp" />
     <ClCompile Include="Geometry.cpp" />
     <ClCompile Include="global.cpp" />
     <ClCompile Include="Input.cpp" />
+    <ClCompile Include="Manager.cpp" />
     <ClCompile Include="Multithreading.cpp" />
     <ClCompile Include="Particle.cpp" />
     <ClCompile Include="png32.cpp" />

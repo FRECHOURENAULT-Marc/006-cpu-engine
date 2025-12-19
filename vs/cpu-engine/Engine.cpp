@@ -74,7 +74,7 @@ void cpu_engine::Initialize(HINSTANCE hInstance, int renderWidth, int renderHeig
 	m_windowWidth = renderWidth;
 	m_windowHeight = renderHeight;
 	m_bilinear = hardwareBilinear;
-	WNDCLASS wc = { };
+	WNDCLASS wc = {};
 	wc.lpfnWndProc = WindowProc;
 	wc.hInstance = hInstance;
 	wc.lpszClassName = "cpu-engine";
@@ -397,7 +397,7 @@ int cpu_engine::GetTotalTriangleCount()
 
 void cpu_engine::DrawText(cpu_font* pFont, const char* text, int x, int y, int align)
 {
-	if ( pFont==nullptr || pFont->rgba.size()==0 || text==nullptr )
+	if ( pFont==nullptr || pFont->bgra.size()==0 || text==nullptr )
 		return;
 
 	cpu_rt& rt = *GetRT();
@@ -421,7 +421,8 @@ void cpu_engine::DrawText(cpu_font* pFont, const char* text, int x, int y, int a
 				penX += cw;
 				continue;
 			}
-			Copy((byte*)rt.colorBuffer.data(), rt.width, rt.height, penX, penY, pFont->rgba.data(), pFont->width, pFont->height, g.x, g.y, g.w, g.h);
+			//Copy((byte*)rt.colorBuffer.data(), rt.width, rt.height, penX, penY, pFont->rgba.data(), pFont->width, pFont->height, g.x, g.y, g.w, g.h);
+			simd::AlphaBlend(pFont->bgra.data(), pFont->width, pFont->height, (byte*)rt.colorBuffer.data(), rt.width, rt.height, g.x, g.y, penX, penY, g.w, g.h);
 			penX += cw;
 		}
 	};
@@ -450,7 +451,8 @@ void cpu_engine::DrawSprite(cpu_sprite* pSprite)
 	int width = pSprite->pTexture->width;
 	int height = pSprite->pTexture->height;
 	byte* dst = (byte*)rt.colorBuffer.data();
-	Copy(dst, rt.width, rt.height, pSprite->x, pSprite->y, pSprite->pTexture->rgba, width, height, 0, 0, width, height);
+	//Copy(dst, rt.width, rt.height, pSprite->x, pSprite->y, pSprite->pTexture->rgba, width, height, 0, 0, width, height);
+	simd::AlphaBlend(pSprite->pTexture->bgra, width, height, dst, rt.width, rt.height, 0, 0, pSprite->x, pSprite->y, width, height);
 }
 
 void cpu_engine::DrawHorzLine(int x1, int x2, int y, XMFLOAT3& color)
@@ -685,9 +687,6 @@ void cpu_engine::Render()
 	// Background
 	switch ( m_clear )
 	{
-	case CLEAR_TRANSPARENT:
-		Clear();
-		break;
 	case CLEAR_COLOR:
 		Fill(m_clearColor);
 		break;
