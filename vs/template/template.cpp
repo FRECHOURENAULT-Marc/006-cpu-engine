@@ -4,9 +4,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int cmdShow)
 {
 	if ( InitializeEngine() )
 	{
-		App app;
-		app.Initialize(hInstance, 1024, 576);
-		app.Run();
+		App application;
+		application.Initialize(hInstance, 1024, 576);
+		application.Run();
 	}
 	UninitializeEngine();
 	return 0;

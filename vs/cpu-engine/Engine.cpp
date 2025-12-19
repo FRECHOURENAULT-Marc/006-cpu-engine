@@ -60,15 +60,15 @@ void cpu_engine::Free()
 	m_hInstance = nullptr;
 }
 
-cpu_engine* cpu_engine::GetInstance()
-{
-	return s_pEngine;
-}
-
-cpu_engine& cpu_engine::GetInstanceRef()
-{
-	return *s_pEngine;
-}
+//cpu_engine* cpu_engine::GetInstance()
+//{
+//	return s_pEngine;
+//}
+//
+//cpu_engine& cpu_engine::GetInstanceRef()
+//{
+//	return *s_pEngine;
+//}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -138,19 +138,20 @@ void cpu_engine::Initialize(HINSTANCE hInstance, int renderWidth, int renderHeig
 	XMStoreFloat3(&m_lightDir, XMVector3Normalize(XMLoadFloat3(&m_lightDir)));
 	m_ambient = 0.2f;
 
-	// Entity
+	// Managers
 	m_entityManager.Clear();
 	m_spriteManager.Clear();
 	m_particleManager.Clear();
 	m_fsmManager.Clear();
 	
-	// Tile
+	// Cores
 #ifdef CONFIG_MT
 	m_threadCount = MAX(1u, std::thread::hardware_concurrency());
 #else
 	m_threadCount = 1;
 #endif
-	m_statsThreadCount = m_threadCount;
+
+	// Tiles
 	m_tileColCount = static_cast<unsigned int>(std::ceil(std::sqrt(m_threadCount)));
 	m_tileRowCount = (m_threadCount + m_tileColCount - 1) / m_tileColCount;
 	m_tileCount = m_tileColCount * m_tileRowCount;
@@ -180,15 +181,21 @@ void cpu_engine::Initialize(HINSTANCE hInstance, int renderWidth, int renderHeig
 		}
 	}
 
+	// Threads
+	m_statsThreadCount = m_threadCount;
+	m_threads.resize(m_threadCount);
+	for ( int i=0 ; i<m_threadCount ; i++ )
+		m_threads[i].Create(m_tileCount);
+
 	// Jobs
 	m_entityJobs.resize(m_threadCount);
 	m_particleSpaceJobs.resize(m_threadCount);
 	m_particleRenderJobs.resize(m_threadCount);
 	for ( int i=0 ; i<m_threadCount ; i++ )
 	{
-		m_entityJobs[i].Create(m_tileCount);
-		m_particleSpaceJobs[i].Create(m_tileCount);
-		m_particleRenderJobs[i].Create(m_tileCount);
+		m_entityJobs[i].Create(&m_threads[i]);
+		m_particleSpaceJobs[i].Create(&m_threads[i]);
+		m_particleRenderJobs[i].Create(&m_threads[i]);
 	}
 
 	// Window
@@ -210,13 +217,9 @@ void cpu_engine::Run()
 	m_fps = 0;
 	OnStart();
 
-	// Jobs
+	// Threads
 	for ( int i=0 ; i<m_threadCount ; i++ )
-	{
-		m_entityJobs[i].Run();
-		m_particleSpaceJobs[i].Run();
-		m_particleRenderJobs[i].Run();
-	}
+		m_threads[i].Run();
 
 	// Loop
 	MSG msg = {};
@@ -242,13 +245,9 @@ void cpu_engine::Run()
 		Render();
 	}
 
-	// Jobs
+	// Threads
 	for ( int i=0 ; i<m_threadCount ; i++ )
-	{
-		m_entityJobs[i].PostQuit();
-		m_particleSpaceJobs[i].PostQuit();
-		m_particleRenderJobs[i].PostQuit();
-	}
+		m_threads[i].Stop();
 
 	// End
 	OnExit();
@@ -261,10 +260,13 @@ void cpu_engine::Quit()
 
 void cpu_engine::FixWindow()
 {
-	RECT rc;
-	GetClientRect(m_hWnd, &rc);
-	m_windowWidth = rc.right-rc.left;
-	m_windowHeight = rc.bottom-rc.top;
+	if ( m_hWnd )
+	{
+		RECT rc;
+		GetClientRect(m_hWnd, &rc);
+		m_windowWidth = rc.right-rc.left;
+		m_windowHeight = rc.bottom-rc.top;
+	}
 
 #ifdef CONFIG_GPU
 	if ( m_pRenderTarget )
@@ -707,31 +709,10 @@ void cpu_engine::Render()
 	OnPreRender();
 
 	// Entities
-	JOBS(m_entityJobs);
+	Render_Entities();
 
 	// Particles
-	memset(m_particleData.tile, 0, m_particleData.alive*sizeof(ui32));
-	JOBS(m_particleSpaceJobs);
-	for ( int i=0 ; i<m_tileCount ; i++ )
-	{
-		for ( int j=0 ; j<m_tileCount ; j++ )
-			m_tiles[i].particleCount += m_tiles[j].particleLocalCounts[i];
-		if ( i>0 )
-		{
-			m_tiles[i].particleOffset = m_tiles[i-1].particleOffset + m_tiles[i-1].particleCount;
-			m_tiles[i].particleOffsetTemp = m_tiles[i].particleOffset;
-		}
-	}
-	for ( int i=0 ; i<m_particleData.alive ; i++ )
-	{
-		ui32 index = m_particleData.tile[i];
-		if ( index )
-		{
-			cpu_tile& tile = m_tiles[index-1];
-			m_particleData.sort[tile.particleOffsetTemp++] = i;
-		}
-	}
-	JOBS(m_particleRenderJobs);
+	Render_Particles();
 
 	// Stats
 	m_statsDrawnTriangleCount = 0;
@@ -906,6 +887,8 @@ void cpu_engine::Render_AssignParticleTile(int iTileForAssign)
 			continue;
 
 		int iTile = (sy/m_tileHeight)*m_tileColCount + sx/m_tileWidth;
+		if ( iTile>=m_tileCount )
+			iTile = m_tileCount - 1;
 		m_particleData.tile[i] = iTile + 1;
 		m_particleData.sx[i] = (ui16)sx;
 		m_particleData.sy[i] = (ui16)sy;
@@ -943,6 +926,42 @@ void cpu_engine::Render_TileParticles(int iTile)
 		float b = dst.z + m_particleData.b[i]*a;
 		rt.colorBuffer[pix] = ToBGR(r, g, b);
 	}
+}
+
+void cpu_engine::Render_Entities()
+{
+	JOBS(m_entityJobs);
+}
+
+void cpu_engine::Render_Particles()
+{
+	// Reset
+	memset(m_particleData.tile, 0, m_particleData.alive*sizeof(ui32));
+
+	// Pre-render
+	JOBS(m_particleSpaceJobs);
+	for ( int i=0 ; i<m_tileCount ; i++ )
+	{
+		for ( int j=0 ; j<m_tileCount ; j++ )
+			m_tiles[i].particleCount += m_tiles[j].particleLocalCounts[i];
+		if ( i>0 )
+		{
+			m_tiles[i].particleOffset = m_tiles[i-1].particleOffset + m_tiles[i-1].particleCount;
+			m_tiles[i].particleOffsetTemp = m_tiles[i].particleOffset;
+		}
+	}
+	for ( int i=0 ; i<m_particleData.alive ; i++ )
+	{
+		ui32 index = m_particleData.tile[i];
+		if ( index )
+		{
+			cpu_tile& tile = m_tiles[index-1];
+			m_particleData.sort[tile.particleOffsetTemp++] = i;
+		}
+	}
+
+	// Render
+	JOBS(m_particleRenderJobs);
 }
 
 void cpu_engine::Render_UI()

@@ -9,6 +9,7 @@ public:
 	virtual ~App();
 
 	static App* GetInstance() { return s_pApp; }
+	static App& GetInstanceRef() { return *s_pApp; }
 
 	void SpawnMissile();
 	void SpawnMissileWithMouse();

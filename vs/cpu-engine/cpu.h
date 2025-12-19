@@ -62,6 +62,7 @@ inline XMVECTOR XMDIR					= g_XMIdentityR2;
 #undef min
 #undef max
 #undef DrawText
+#undef SetJob
 
 // Forward declarations
 struct cpu_aabb;
@@ -70,6 +71,7 @@ struct cpu_obb;
 struct cpu_ps_io;
 struct cpu_tile;
 class cpu_engine;
+class cpu_job;
 
 // Types
 using i16								= __int16;
@@ -90,7 +92,6 @@ using PS_FUNC							= void(*)(cpu_ps_io& data);
 #define RELPTR(p)						{ if ( (p) ) { (p)->Release(); (p) = nullptr; } }
 #define DELPTR(p)						{ if ( (p) ) { delete (p); (p) = nullptr; } }
 #define DELPTRS(p)						{ if ( (p) ) { delete [] (p); (p) = nullptr; } }
-#define I(p)							p::GetInstance()
 #define CAPTION(v)						SetWindowText(cpu.GetHWND(), std::to_string(v).c_str());
 #define ID(s)							GetStateID<s>()
 #define RGBX(r,g,b)						((ui32)(((byte)(r)|((ui16)((byte)(g))<<8))|(((ui16)(byte)(b))<<16))|0xFF000000)
@@ -99,11 +100,12 @@ using PS_FUNC							= void(*)(cpu_ps_io& data);
 #define G(rgba)							(((rgba)>>8)&0xFF)
 #define B(rgba)							(((rgba)>>16)&0xFF)
 #define A(rgba)							(((rgba)>>24)&0xFF)
-#define JOBS(j)							{m_nextTile=0;for(size_t i=0;i<(j).size();i++)(j)[i].PostStartEvent();for(size_t i=0;i<(j).size();i++)(j)[i].WaitEndEvent();}
+#define JOBS(j)							{m_nextTile=0;for(size_t i=0;i<(j).size();i++)(j)[i].GetThread()->PostStartEvent(&(j)[i]);for(size_t i=0;i<(j).size();i++)(j)[i].GetThread()->WaitEndEvent();}
 #define MIN								std::min
 #define MAX								std::max
 
 // Special
+#define app								App::GetInstanceRef()
 #define cpu								cpu_engine::GetInstanceRef()
 #define input							cpu_engine::GetInstance()->GetInput()
 #define dtime							cpu_engine::GetInstance()->GetDeltaTime()

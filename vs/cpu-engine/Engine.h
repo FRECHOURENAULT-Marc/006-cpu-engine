@@ -12,8 +12,8 @@ public:
 	virtual ~cpu_engine();
 	void Free();
 
-	static cpu_engine* GetInstance();
-	static cpu_engine& GetInstanceRef();
+	static cpu_engine* GetInstance() { return s_pEngine; }
+	static cpu_engine& GetInstanceRef() { return *s_pEngine; }
 
 	void Initialize(HINSTANCE hInstance, int renderWidth, int renderHeight, float windowScaleAtStart = 1.0f, bool fullscreen = false, bool hardwareBilinear = false);
 	void Run();
@@ -82,6 +82,8 @@ private:
 	void Render_TileEntities(int iTile);
 	void Render_AssignParticleTile(int iTileForAssign);
 	void Render_TileParticles(int iTile);
+	void Render_Entities();
+	void Render_Particles();
 	void Render_UI();
 
 	void Clear();
@@ -135,6 +137,7 @@ private:
 
 	// Jobs
 	int m_threadCount;
+	std::vector<cpu_thread_job> m_threads;
 	std::vector<cpu_job_entity> m_entityJobs;
 	std::vector<cpu_job_particle_space> m_particleSpaceJobs;
 	std::vector<cpu_job_particle_render> m_particleRenderJobs;

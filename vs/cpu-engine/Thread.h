@@ -12,7 +12,7 @@ public:
 	bool Run();
 	bool Run(const _METHOD& callback);
 	void Wait();
-	void Quit();
+	void QuitAsap();
 
 	void SetCallback(const _METHOD& callback) { m_callback = callback; }
 	virtual void OnCallback() {}
@@ -29,5 +29,5 @@ protected:
 	DWORD m_idThread;
 	DWORD m_idThreadParent;
 	_METHOD m_callback;
-	bool m_quitRequest;
+	bool m_quitAsap;
 };

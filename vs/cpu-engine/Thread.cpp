@@ -6,7 +6,7 @@ cpu_thread::cpu_thread()
 	m_hThread = nullptr;
 	m_idThread = 0;
 	m_idThreadParent = 0;
-	m_quitRequest = false;
+	m_quitAsap = false;
 }
 
 cpu_thread::~cpu_thread()
@@ -58,9 +58,9 @@ void cpu_thread::Wait()
 	}
 }
 
-void cpu_thread::Quit()
+void cpu_thread::QuitAsap()
 {
-	m_quitRequest = true;
+	m_quitAsap = true;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -71,7 +71,7 @@ DWORD WINAPI cpu_thread::ThreadProc(void* pParam)
 {
 	cpu_thread* pThread = (cpu_thread*)pParam;
 
-	pThread->m_quitRequest = false;
+	pThread->m_quitAsap = false;
 	if ( pThread->m_callback!=nullptr )
 		pThread->m_callback();
 	else

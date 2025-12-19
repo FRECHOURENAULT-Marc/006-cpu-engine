@@ -127,7 +127,7 @@ void App::OnUpdate()
 
 	// Fire
 	if ( input.IsKeyDown(VK_LBUTTON) || input.IsKey(VK_RBUTTON) )
-		I(App)->SpawnMissileWithMouse();
+		app.SpawnMissileWithMouse();
 
 	// Move missiles
 	for ( auto it=m_missiles.begin() ; it!=m_missiles.end() ; )
@@ -234,7 +234,7 @@ void Ship::Update()
 
 	// Fire
 	if ( input.IsKey(VK_SPACE) )
-		I(App)->SpawnMissile();
+		app.SpawnMissile();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
