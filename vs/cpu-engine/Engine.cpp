@@ -128,6 +128,9 @@ void cpu_engine::Initialize(HINSTANCE hInstance, int renderWidth, int renderHeig
 	XMStoreFloat3(&m_lightDir, XMVector3Normalize(XMLoadFloat3(&m_lightDir)));
 	m_ambient = 0.2f;
 
+	// Cursor
+	m_pCursor = nullptr;
+
 	// Managers
 	m_entityManager.Clear();
 	m_spriteManager.Clear();
@@ -335,6 +338,11 @@ cpu_rt* cpu_engine::Release(cpu_rt* pRT)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+void cpu_engine::SetCursor(cpu_texture* pTexture)
+{
+	m_pCursor = pTexture;
+}
+
 void cpu_engine::GetCursor(XMFLOAT2& pos)
 {
 	cpu_rt& rt = *GetMainRT();
@@ -444,13 +452,16 @@ void cpu_engine::DrawText(cpu_font* pFont, const char* text, int x, int y, int a
 	}
 }
 
-void cpu_engine::DrawSprite(cpu_sprite* pSprite)
+void cpu_engine::DrawTexture(cpu_texture* pTexture, int x, int y)
 {
 	cpu_rt& rt = *GetRT();
-	int width = pSprite->pTexture->width;
-	int height = pSprite->pTexture->height;
 	byte* dst = (byte*)rt.colorBuffer.data();
-	cpu_ns_img32::AlphaBlend(pSprite->pTexture->bgra, width, height, dst, rt.width, rt.height, 0, 0, pSprite->x, pSprite->y, width, height);
+	cpu_ns_img32::AlphaBlend(pTexture->bgra, pTexture->width, pTexture->height, dst, rt.width, rt.height, 0, 0, x, y, pTexture->width, pTexture->height);
+}
+
+void cpu_engine::DrawSprite(cpu_sprite* pSprite)
+{
+	DrawTexture(pSprite->pTexture, pSprite->x-pSprite->anchorX, pSprite->y-pSprite->anchorY);
 }
 
 void cpu_engine::DrawHorzLine(int x1, int x2, int y, XMFLOAT3& color)
@@ -694,24 +705,32 @@ void cpu_engine::Render()
 	}
 
 	// Callback
-	OnPreRender();
+	OnRender(CPU_PASS_CLEAR);
 
 	// Entities
+	OnRender(CPU_PASS_ENTITY_BEGIN);
 	Render_Entities();
+	OnRender(CPU_PASS_ENTITY_END);
 
 	// Particles
+	OnRender(CPU_PASS_PARTICLE_BEGIN);
 	Render_Particles();
+	OnRender(CPU_PASS_PARTICLE_END);
 
 	// Stats
 	m_statsDrawnTriangleCount = 0;
 	for ( int i=0 ; i<m_tileCount ; i++ )
 		m_statsDrawnTriangleCount += m_tiles[i].statsDrawnTriangleCount;
 
-	// Callback
-	OnPostRender();
+	// UI
+	OnRender(CPU_PASS_UI_BEGIN);
+	Render_UI();
+	OnRender(CPU_PASS_UI_END);
 
 	// UI
+	OnRender(CPU_PASS_CURSOR_BEGIN);
 	Render_UI();
+	OnRender(CPU_PASS_CURSOR_END);
 
 	// Present
 	Present();
@@ -962,6 +981,16 @@ void cpu_engine::Render_UI()
 
 		DrawSprite(pSprite);
 	}
+}
+
+void cpu_engine::Render_Cursor()
+{
+	if ( m_pCursor==nullptr )
+		return;
+
+	XMFLOAT2 pt;
+	GetCursor(pt);
+	DrawTexture(m_pCursor, (int)pt.x, (int)pt.y);	
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

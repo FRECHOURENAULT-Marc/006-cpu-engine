@@ -17,8 +17,7 @@ public:
 	void OnStart() override;
 	void OnUpdate() override;
 	void OnExit() override;
-	void OnPreRender() override;
-	void OnPostRender() override;
+	void OnRender(int pass) override;
 
 	static void MissileShader(cpu_ps_io& io);
 	static void RockShader(cpu_ps_io& io);

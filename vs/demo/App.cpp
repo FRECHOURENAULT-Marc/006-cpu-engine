@@ -59,8 +59,8 @@ void App::OnStart()
 	m_pSprite = CreateSprite();
 	m_pSprite->pTexture = &m_texture;
 	m_pSprite->CenterAnchor();
-	m_pSprite->x = 30;
-	m_pSprite->y = 30;
+	m_pSprite->x = 40;
+	m_pSprite->y = 0;
 
 	// Shader
 	m_materialShip.color = ToColor(255, 128, 0);
@@ -99,7 +99,7 @@ void App::OnUpdate()
 	// YOUR CODE HERE
 
 	// Move sprite
-	m_pSprite->y = 30 + RoundToInt(sinf(m_totalTime)*20.0f);
+	m_pSprite->y = 60 + RoundToInt(sinf(m_totalTime)*20.0f);
 
 	// Turn ball
 	m_pBall->transform.AddYPR(m_deltaTime);
@@ -156,14 +156,12 @@ void App::OnExit()
 	m_missiles.clear();
 }
 
-void App::OnPreRender()
+void App::OnRender(int pass)
 {
 	// YOUR CODE HERE
-}
 
-void App::OnPostRender()
-{
-	// YOUR CODE HERE
+	if ( pass!=CPU_PASS_UI_END )
+		return;
 
 	// Debug
 	std::string info = std::to_string(m_fps) + " fps, ";

@@ -28,12 +28,7 @@ void App::OnExit()
 	// YOUR CODE HERE
 }
 
-void App::OnPreRender()
-{
-	// YOUR CODE HERE
-}
-
-void App::OnPostRender()
+void App::OnRender(int pass)
 {
 	// YOUR CODE HERE
 }

@@ -44,6 +44,7 @@ public:
 	cpu_particle_emitter* Release(cpu_particle_emitter* pEmitter);
 	cpu_rt* Release(cpu_rt* pRT);
 
+	void SetCursor(cpu_texture* pTexture);
 	void GetCursor(XMFLOAT2& pt);
 	cpu_ray GetCameraRay(XMFLOAT2& pt);
 	cpu_camera* GetCamera();
@@ -51,6 +52,7 @@ public:
 	int GetTotalTriangleCount();
 
 	void DrawText(cpu_font* pFont, const char* text, int x, int y, int align = CPU_TEXT_LEFT);
+	void DrawTexture(cpu_texture* pTexture, int x, int y);
 	void DrawSprite(cpu_sprite* pSprite);
 	void DrawHorzLine(int x1, int x2, int y, XMFLOAT3& color);
 	void DrawVertLine(int y1, int y2, int x, XMFLOAT3& color);
@@ -61,8 +63,7 @@ protected:
 	virtual void OnStart() {}
 	virtual void OnUpdate() {}
 	virtual void OnExit() {}
-	virtual void OnPreRender() {}
-	virtual void OnPostRender() {}
+	virtual void OnRender(int pass) {}
 	virtual LRESULT OnWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
 private:
@@ -85,6 +86,7 @@ private:
 	void Render_Entities();
 	void Render_Particles();
 	void Render_UI();
+	void Render_Cursor();
 
 	void Clear();
 	void ClearDepth();
@@ -181,6 +183,9 @@ private:
 	DWORD m_systime;
 	DWORD m_fpsTime;
 	int m_fpsCount;
+
+	// Cursor
+	cpu_texture* m_pCursor;
 
 	// Managers
 	cpu_manager<cpu_fsm_base> m_fsmManager;

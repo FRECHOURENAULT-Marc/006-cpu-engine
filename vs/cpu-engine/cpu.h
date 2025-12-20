@@ -145,6 +145,17 @@ inline XMFLOAT3 CPU_ORANGE				= { 1.0f, 0.5f, 0.0f };
 #define CPU_DEPTH_WRITE					2
 #define CPU_DEPTH_RW					4
 
+// Pass
+#define CPU_PASS_CLEAR					10
+#define CPU_PASS_ENTITY_BEGIN			20
+#define CPU_PASS_ENTITY_END				21
+#define CPU_PASS_PARTICLE_BEGIN			30
+#define CPU_PASS_PARTICLE_END			31
+#define CPU_PASS_UI_BEGIN				40
+#define CPU_PASS_UI_END					41
+#define CPU_PASS_CURSOR_BEGIN			50
+#define CPU_PASS_CURSOR_END				51
+
 // Core
 #include "png32.h"
 #include "img32.h"
