@@ -53,6 +53,7 @@ void App::OnStart()
 	m_meshShip.CreateSpaceship();
 	m_meshMissile.CreateSphere(0.5f);
 	m_meshSphere.CreateSphere(2.0f, 12, 12, ToColor(224, 224, 224));
+	m_rts[0] = CreateRT();
 
 	// UI
 	m_pSprite = CreateSprite();
@@ -163,30 +164,47 @@ void App::OnRender(int pass)
 {
 	// YOUR CODE HERE
 
-	if ( pass!=CPU_PASS_UI_END )
-		return;
-
-	// Debug
-	std::string info = std::to_string(m_fps) + " fps, ";
-	info += std::to_string(m_statsDrawnTriangleCount) + " triangles, ";
-	info += std::to_string(m_statsClipEntityCount) + " clipped entities\n";
-	info += std::to_string(m_missiles.size()) + " missiles, ";
-	info += std::to_string(m_particleData.alive) + " particles, ";
-	info += std::to_string(m_statsThreadCount) + " threads, ";
-	info += std::to_string(m_statsTileCount) + " tiles";
-
-	// Ray cast
-	cpu_ray ray;
-	GetCursorRay(ray);
-	cpu_hit hit;
-	cpu_entity* pEntity = HitEntity(hit, ray);
-	if ( pEntity )
+	switch ( pass )
 	{
-		info += "\nHIT: ";
-		info += std::to_string(pEntity->index).c_str();
-	}
+		case CPU_PASS_PARTICLE_BEGIN:
+		{
+			SetRT(m_rts[0], true);
+			ClearColor();
+			break;
+		}
+		case CPU_PASS_PARTICLE_END:
+		{
+			Blur(10);
+			SetMainRT(true);
+			AlphaBlend(m_rts[0]);
+			break;
+		}
+		case CPU_PASS_UI_END:
+		{
+			// Debug
+			std::string info = STR(m_fps) + " fps, ";
+			info += STR(m_statsDrawnTriangleCount) + " triangles, ";
+			info += STR(m_statsClipEntityCount) + " clipped entities\n";
+			info += STR(m_missiles.size()) + " missiles, ";
+			info += STR(m_particleData.alive) + " particles, ";
+			info += STR(m_statsThreadCount) + " threads, ";
+			info += STR(m_statsTileCount) + " tiles";
 
-	DrawText(&m_font, info.c_str(), (int)GetMainRT()->widthHalf, 10, CPU_TEXT_CENTER);
+			// Ray cast
+			cpu_ray ray;
+			GetCursorRay(ray);
+			cpu_hit hit;
+			cpu_entity* pEntity = HitEntity(hit, ray);
+			if ( pEntity )
+			{
+				info += "\nHIT: ";
+				info += STR(pEntity->index).c_str();
+			}
+
+			DrawText(&m_font, info.c_str(), (int)GetMainRT()->widthHalf, 10, CPU_TEXT_CENTER);
+			break;
+		}
+	}
 }
 
 void App::MissileShader(cpu_ps_io& io)

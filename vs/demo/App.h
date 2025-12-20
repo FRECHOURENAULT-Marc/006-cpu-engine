@@ -31,6 +31,7 @@ private:
 	cpu_mesh m_meshMissile;
 	cpu_mesh m_meshSphere;
 	cpu_texture m_texture;
+	cpu_rt* m_rts[1];
 
 	// UI
 	cpu_sprite* m_pSprite;

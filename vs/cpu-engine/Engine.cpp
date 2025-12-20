@@ -31,6 +31,9 @@ void cpu_engine::Free()
 	if ( m_hInstance==nullptr )
 		return;
 
+	// Image
+	cpu_img32::Free();
+	
 	// Jobs
 	m_entityJobs.clear();
 	m_particleSpaceJobs.clear();
@@ -288,6 +291,290 @@ void cpu_engine::FixDevice()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+cpu_rt* cpu_engine::SetMainRT(bool copyDepth)
+{
+	if ( m_pRT==&m_mainRT )
+		return m_pRT;
+
+	cpu_rt* pOld = m_pRT;
+	m_pRT = &m_mainRT;
+	if ( copyDepth )
+		CopyDepth(pOld);
+
+	return pOld;
+}
+
+cpu_rt* cpu_engine::SetRT(cpu_rt* pRT, bool copyDepth)
+{
+	if ( pRT==m_pRT )
+		return m_pRT;
+
+	cpu_rt* pOld = m_pRT;
+	m_pRT = pRT;
+	if ( copyDepth )
+		CopyDepth(pOld);
+
+	return pOld;
+}
+
+void cpu_engine::CopyDepth(cpu_rt* pRT)
+{
+	if ( pRT==nullptr )
+		return;
+
+	cpu_rt& rt = *GetRT();
+	if ( pRT->depth && rt.depth )
+		rt.depthBuffer = pRT->depthBuffer;
+}
+
+void cpu_engine::AlphaBlend(cpu_rt* pRT)
+{
+	if ( pRT==nullptr )
+		return;
+
+	cpu_rt& rt = *GetRT();
+	cpu_img32::AlphaBlend((byte*)pRT->colorBuffer.data(), pRT->width, pRT->height, (byte*)rt.colorBuffer.data(), rt.width, rt.height, 0, 0, 0, 0, rt.width, rt.height); 
+}
+
+void cpu_engine::Blur(int radius)
+{
+	if ( radius<1 )
+		return;
+
+	cpu_rt& rt = *GetRT();
+	cpu_img32::Blur((byte*)rt.colorBuffer.data(), rt.width, rt.height, radius);
+}
+
+void cpu_engine::ClearColor()
+{
+	cpu_rt& rt = *GetRT();
+	std::fill(rt.colorBuffer.begin(), rt.colorBuffer.end(), 0);
+}
+
+void cpu_engine::ClearColor(XMFLOAT3& rgb)
+{
+	cpu_rt& rt = *GetRT();
+	std::fill(rt.colorBuffer.begin(), rt.colorBuffer.end(), ToBGR(rgb));
+}
+
+void cpu_engine::ClearDepth()
+{
+	cpu_rt& rt = *GetRT();
+	std::fill(rt.depthBuffer.begin(), rt.depthBuffer.end(), 1.0f);
+}
+
+void cpu_engine::ClearSky()
+{
+	cpu_rt& rt = *GetRT();
+
+	ui32 gCol = ToBGR(m_groundColor);
+	ui32 sCol = ToBGR(m_skyColor);
+
+	XMMATRIX matView = XMLoadFloat4x4(&m_camera.matView);
+	XMVECTOR worldUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
+	XMVECTOR viewUp = XMVector3TransformNormal(worldUp, matView);
+
+	float nx = XMVectorGetX(viewUp);
+	float ny = XMVectorGetY(viewUp);
+	float nz = XMVectorGetZ(viewUp);
+
+	float p11 = m_camera.matProj._11; // Cotan(FovX/2) / Aspect
+	float p22 = m_camera.matProj._22; // Cotan(FovY/2)
+
+	float a = nx / (p11 * rt.widthHalf);
+	float b = -ny / (p22 * rt.heightHalf); // Le signe '-' compense l'axe Y inversé de l'écran
+	float c = nz - (nx / p11) + (ny / p22);
+
+	bool rightSideIsSky = a > 0;
+	
+	ui32 colLeft  = rightSideIsSky ? gCol : sCol;
+	ui32 colRight = rightSideIsSky ? sCol : gCol;
+
+	if ( fabsf(a)<0.000001f )
+	{
+		for ( int y=0 ; y<rt.height ; y++ )
+		{
+			float val = b * (float)y + c;
+			ui32 col = val>0.0f ? sCol : gCol;
+			std::fill(rt.colorBuffer.begin() + (y * rt.width),  rt.colorBuffer.begin() + ((y + 1) * rt.width), col);
+		}
+	}
+	else
+	{
+		float invA = -1.0f / a;
+		for ( int y=0 ; y<rt.height ; y++ )
+		{
+			float fSplitX = (b * (float)y + c) * invA;
+			int splitX;
+			if ( fSplitX<0.0f )
+				splitX = 0;
+			else if ( fSplitX>(float)rt.width)
+				splitX = rt.width;
+			else
+				splitX = (int)fSplitX;
+
+			ui32* rowPtr = rt.colorBuffer.data() + (y * rt.width);
+			if ( splitX>0 )
+				std::fill(rowPtr, rowPtr + splitX, colLeft);
+			if ( splitX<rt.width )
+				std::fill(rowPtr + splitX, rowPtr + rt.width, colRight);
+		}
+	}
+
+	// Sky Line
+	////////////
+
+	float bandPx = rt.height/20.0f;
+	if ( bandPx<=0.5f )
+		return;
+
+	float grad = sqrtf(a*a + b*b);
+	if ( grad<1e-8f )
+		return;
+
+	const float invGrad = 1.0f / grad;
+	const float invBand = 1.0f / bandPx;
+	const float limit   = bandPx * grad;
+
+	if ( fabsf(a)<1e-6f )
+	{
+		for ( int y=0 ; y<rt.height ; ++y )
+		{
+			float distPx = (b * (float)y + c) * invGrad;
+			if ( fabsf(distPx)>bandPx )
+				continue;
+			float t = Clamp(0.5f + distPx * invBand);
+			t = t * t * (3.0f - 2.0f * t); // optional
+			ui32 col = LerpColor(gCol, sCol, t);
+			ui32* row = rt.colorBuffer.data() + y * rt.width;
+			std::fill(row, row + rt.width, col);
+		}
+		return;
+	}
+
+	for ( int y=0 ; y<rt.height ; ++y )
+	{
+		ui32* row = rt.colorBuffer.data() + y * rt.width;
+		float byc = b * (float)y + c;
+		float xA = (-limit - byc) / a;
+		float xB = ( +limit - byc) / a;
+		float xMinF = (xA < xB) ? xA : xB;
+		float xMaxF = (xA > xB) ? xA : xB;
+		int x0 = FloorToInt(xMinF);
+		int x1 = CeilToInt(xMaxF);
+		if ( x1<0 || x0>=rt.width )
+			continue;
+		if ( x0<0 )
+			x0 = 0;
+		if ( x1>=rt.width)
+			x1 = rt.width - 1;
+		float val = byc + a * (float)x0;
+		ui32* p = row + x0;
+		ui32* e = row + x1 + 1;
+		while ( p!=e )
+		{
+			float distPx = val * invGrad;
+			float t = Clamp(0.5f + distPx * invBand);
+			t = t * t * (3.0f - 2.0f * t); // optional
+			*p++ = LerpColor(gCol, sCol, t);
+			val += a;
+		}
+	}
+}
+
+void cpu_engine::DrawMesh(cpu_mesh* pMesh, cpu_transform* pTransform, cpu_material* pMaterial, int depthMode, cpu_tile* pTile)
+{
+	cpu_rt& rt = *GetRT();
+	cpu_material& material = pMaterial ? *pMaterial : m_defaultMaterial;
+	XMMATRIX matWorld = XMLoadFloat4x4(&pTransform->GetWorld());
+	XMMATRIX matNormal = XMMatrixTranspose(XMLoadFloat4x4(&pTransform->GetInvWorld()));
+	XMMATRIX matViewProj = XMLoadFloat4x4(&m_camera.matViewProj);
+	XMVECTOR lightDir = XMLoadFloat3(&m_lightDir);
+
+	cpu_drawcall dc;
+	bool safe;
+	XMFLOAT3 screen[3];
+	cpu_vertex_out vo[3];
+
+	for ( const cpu_triangle& triangle : pMesh->triangles )
+	{
+		// Verter shader
+		safe = true;
+		for ( int i=0 ; i<3 ; ++i )
+		{
+			// Vertex
+			const cpu_vertex& in = triangle.v[i];
+
+			// World pos
+			XMVECTOR loc = XMLoadFloat3(&in.pos);
+			loc = XMVectorSetW(loc, 1.0f);
+			XMVECTOR world = XMVector4Transform(loc, matWorld);
+			XMStoreFloat3(&vo[i].worldPos, world);
+
+			// Clip pos
+			XMVECTOR clip = XMVector4Transform(world, matViewProj);
+			XMStoreFloat4(&vo[i].clipPos, clip);
+			if ( vo[i].clipPos.w<=0.0f )
+			{
+				safe = false;
+				break;
+			}
+			vo[i].invW = 1.0f / vo[i].clipPos.w;
+
+			// World normal
+			XMVECTOR localNormal = XMLoadFloat3(&in.normal);
+			XMVECTOR worldNormal = XMVector3TransformNormal(localNormal, matNormal);
+			worldNormal = XMVector3Normalize(worldNormal);
+			XMStoreFloat3(&vo[i].worldNormal, worldNormal);
+
+			// Albedo
+			vo[i].albedo.x = Clamp(in.color.x * material.color.x);
+			vo[i].albedo.y = Clamp(in.color.y * material.color.y);
+			vo[i].albedo.z = Clamp(in.color.z * material.color.z);
+
+			// Intensity
+			float ndotl = XMVectorGetX(XMVector3Dot(worldNormal, lightDir));
+			ndotl = MAX(0.0f, ndotl);
+			vo[i].intensity = ndotl + m_ambient;
+
+			// Screen pos
+			float ndcX = vo[i].clipPos.x * vo[i].invW;			// [-1,1]
+			float ndcY = vo[i].clipPos.y * vo[i].invW;			// [-1,1]
+			float ndcZ = vo[i].clipPos.z * vo[i].invW;			// [0,1] avec XMMatrixPerspectiveFovLH
+			screen[i].x = (ndcX + 1.0f) * rt.widthHalf;
+			screen[i].y = (1.0f - ndcY) * rt.heightHalf;
+			screen[i].z = Clamp(ndcZ);							// profondeur normalisée 0..1
+		}
+		if ( safe==false )
+			continue;
+
+		// Culling
+		float area = (screen[1].x-screen[0].x) * (screen[2].y-screen[0].y) - (screen[1].y-screen[0].y) * (screen[2].x-screen[0].x);
+		bool isFront = m_cullFrontCCW ? (area>m_cullAreaEpsilon) : (area<-m_cullAreaEpsilon);
+		if ( isFront==false )
+			continue; // back-face or degenerated
+
+		// Pixel shader
+		dc.tri = screen;
+		dc.vo = vo;
+		dc.pMaterial = &material;
+		dc.pTile = pTile ? pTile : &m_tiles[0];
+		dc.depth = depthMode;
+		FillTriangle(dc);
+
+		// Wireframe
+#ifdef CONFIG_WIREFRAME
+		DrawLine((int)screen[0].x, (int)screen[0].y, screen[0].z, (int)screen[1].x, (int)screen[1].y, screen[1].z, WHITE);
+		DrawLine((int)screen[1].x, (int)screen[1].y, screen[1].z, (int)screen[2].x, (int)screen[2].y, screen[2].z, WHITE);
+		DrawLine((int)screen[2].x, (int)screen[2].y, screen[2].z, (int)screen[0].x, (int)screen[0].y, screen[0].z, WHITE);
+#endif
+	}
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
 cpu_entity* cpu_engine::CreateEntity()
 {
 	return m_entityManager.Create();
@@ -499,7 +786,7 @@ void cpu_engine::DrawText(cpu_font* pFont, const char* text, int x, int y, int a
 				penX += cw;
 				continue;
 			}
-			cpu_ns_img32::AlphaBlend(pFont->bgra.data(), pFont->width, pFont->height, (byte*)rt.colorBuffer.data(), rt.width, rt.height, g.x, g.y, penX, penY, g.w, g.h);
+			cpu_img32::AlphaBlend(pFont->bgra.data(), pFont->width, pFont->height, (byte*)rt.colorBuffer.data(), rt.width, rt.height, g.x, g.y, penX, penY, g.w, g.h);
 			penX += cw;
 		}
 	};
@@ -526,7 +813,7 @@ void cpu_engine::DrawTexture(cpu_texture* pTexture, int x, int y)
 {
 	cpu_rt& rt = *GetRT();
 	byte* dst = (byte*)rt.colorBuffer.data();
-	cpu_ns_img32::AlphaBlend(pTexture->bgra, pTexture->width, pTexture->height, dst, rt.width, rt.height, 0, 0, x, y, pTexture->width, pTexture->height);
+	cpu_img32::AlphaBlend(pTexture->bgra, pTexture->width, pTexture->height, dst, rt.width, rt.height, 0, 0, x, y, pTexture->width, pTexture->height);
 }
 
 void cpu_engine::DrawSprite(cpu_sprite* pSprite)
@@ -751,8 +1038,9 @@ void cpu_engine::Update_Purge()
 {
 	m_fsmManager.Purge();
 	m_entityManager.Purge();
-	m_spriteManager.Purge();
 	m_particleManager.Purge();
+	m_spriteManager.Purge();
+	m_rtManager.Purge();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -775,22 +1063,19 @@ void cpu_engine::Render()
 	Render_ApplyClipping();
 	Render_AssignEntityTile();
 
-	// Depth
+	// Clear
+	OnRender(CPU_PASS_CLEAR_BEGIN);
 	ClearDepth();
-
-	// Background
 	switch ( m_clear )
 	{
 	case CPU_CLEAR_COLOR:
-		Fill(m_clearColor);
+		ClearColor(m_clearColor);
 		break;
 	case CPU_CLEAR_SKY:
-		FillSky();
+		ClearSky();
 		break;
 	}
-
-	// Callback
-	OnRender(CPU_PASS_CLEAR);
+	OnRender(CPU_PASS_CLEAR_END);
 
 	// Entities
 	OnRender(CPU_PASS_ENTITY_BEGIN);
@@ -1080,232 +1365,6 @@ void cpu_engine::Render_Cursor()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-void cpu_engine::Clear()
-{
-	cpu_rt& rt = *GetRT();
-	std::fill(rt.colorBuffer.begin(), rt.colorBuffer.end(), 0);
-}
-
-void cpu_engine::ClearDepth()
-{
-	cpu_rt& rt = *GetRT();
-	std::fill(rt.depthBuffer.begin(), rt.depthBuffer.end(), 1.0f);
-}
-
-void cpu_engine::Fill(XMFLOAT3& rgb)
-{
-	cpu_rt& rt = *GetRT();
-	std::fill(rt.colorBuffer.begin(), rt.colorBuffer.end(), ToBGR(rgb));
-}
-
-void cpu_engine::FillSky()
-{
-	cpu_rt& rt = *GetRT();
-
-	ui32 gCol = ToBGR(m_groundColor);
-	ui32 sCol = ToBGR(m_skyColor);
-
-	XMMATRIX matView = XMLoadFloat4x4(&m_camera.matView);
-	XMVECTOR worldUp = XMVectorSet(0.0f, 1.0f, 0.0f, 0.0f);
-	XMVECTOR viewUp = XMVector3TransformNormal(worldUp, matView);
-
-	float nx = XMVectorGetX(viewUp);
-	float ny = XMVectorGetY(viewUp);
-	float nz = XMVectorGetZ(viewUp);
-
-	float p11 = m_camera.matProj._11; // Cotan(FovX/2) / Aspect
-	float p22 = m_camera.matProj._22; // Cotan(FovY/2)
-
-	float a = nx / (p11 * rt.widthHalf);
-	float b = -ny / (p22 * rt.heightHalf); // Le signe '-' compense l'axe Y inversé de l'écran
-	float c = nz - (nx / p11) + (ny / p22);
-
-	bool rightSideIsSky = a > 0;
-	
-	ui32 colLeft  = rightSideIsSky ? gCol : sCol;
-	ui32 colRight = rightSideIsSky ? sCol : gCol;
-
-	if ( fabsf(a)<0.000001f )
-	{
-		for ( int y=0 ; y<rt.height ; y++ )
-		{
-			float val = b * (float)y + c;
-			ui32 col = val>0.0f ? sCol : gCol;
-			std::fill(rt.colorBuffer.begin() + (y * rt.width),  rt.colorBuffer.begin() + ((y + 1) * rt.width), col);
-		}
-	}
-	else
-	{
-		float invA = -1.0f / a;
-		for ( int y=0 ; y<rt.height ; y++ )
-		{
-			float fSplitX = (b * (float)y + c) * invA;
-			int splitX;
-			if ( fSplitX<0.0f )
-				splitX = 0;
-			else if ( fSplitX>(float)rt.width)
-				splitX = rt.width;
-			else
-				splitX = (int)fSplitX;
-
-			ui32* rowPtr = rt.colorBuffer.data() + (y * rt.width);
-			if ( splitX>0 )
-				std::fill(rowPtr, rowPtr + splitX, colLeft);
-			if ( splitX<rt.width )
-				std::fill(rowPtr + splitX, rowPtr + rt.width, colRight);
-		}
-	}
-
-	// Sky Line
-	////////////
-
-	float bandPx = rt.height/20.0f;
-	if ( bandPx<=0.5f )
-		return;
-
-	float grad = sqrtf(a*a + b*b);
-	if ( grad<1e-8f )
-		return;
-
-	const float invGrad = 1.0f / grad;
-	const float invBand = 1.0f / bandPx;
-	const float limit   = bandPx * grad;
-
-	if ( fabsf(a)<1e-6f )
-	{
-		for ( int y=0 ; y<rt.height ; ++y )
-		{
-			float distPx = (b * (float)y + c) * invGrad;
-			if ( fabsf(distPx)>bandPx )
-				continue;
-			float t = Clamp(0.5f + distPx * invBand);
-			t = t * t * (3.0f - 2.0f * t); // optional
-			ui32 col = LerpColor(gCol, sCol, t);
-			ui32* row = rt.colorBuffer.data() + y * rt.width;
-			std::fill(row, row + rt.width, col);
-		}
-		return;
-	}
-
-	for ( int y=0 ; y<rt.height ; ++y )
-	{
-		ui32* row = rt.colorBuffer.data() + y * rt.width;
-		float byc = b * (float)y + c;
-		float xA = (-limit - byc) / a;
-		float xB = ( +limit - byc) / a;
-		float xMinF = (xA < xB) ? xA : xB;
-		float xMaxF = (xA > xB) ? xA : xB;
-		int x0 = FloorToInt(xMinF);
-		int x1 = CeilToInt(xMaxF);
-		if ( x1<0 || x0>=rt.width )
-			continue;
-		if ( x0<0 )
-			x0 = 0;
-		if ( x1>=rt.width)
-			x1 = rt.width - 1;
-		float val = byc + a * (float)x0;
-		ui32* p = row + x0;
-		ui32* e = row + x1 + 1;
-		while ( p!=e )
-		{
-			float distPx = val * invGrad;
-			float t = Clamp(0.5f + distPx * invBand);
-			t = t * t * (3.0f - 2.0f * t); // optional
-			*p++ = LerpColor(gCol, sCol, t);
-			val += a;
-		}
-	}
-}
-
-void cpu_engine::DrawMesh(cpu_mesh* pMesh, cpu_transform* pTransform, cpu_material* pMaterial, int depthMode, cpu_tile* pTile)
-{
-	cpu_rt& rt = *GetRT();
-	cpu_material& material = pMaterial ? *pMaterial : m_defaultMaterial;
-	XMMATRIX matWorld = XMLoadFloat4x4(&pTransform->GetWorld());
-	XMMATRIX matNormal = XMMatrixTranspose(XMLoadFloat4x4(&pTransform->GetInvWorld()));
-	XMMATRIX matViewProj = XMLoadFloat4x4(&m_camera.matViewProj);
-	XMVECTOR lightDir = XMLoadFloat3(&m_lightDir);
-
-	cpu_drawcall dc;
-	bool safe;
-	XMFLOAT3 screen[3];
-	cpu_vertex_out vo[3];
-
-	for ( const cpu_triangle& triangle : pMesh->triangles )
-	{
-		// Verter shader
-		safe = true;
-		for ( int i=0 ; i<3 ; ++i )
-		{
-			// Vertex
-			const cpu_vertex& in = triangle.v[i];
-
-			// World pos
-			XMVECTOR loc = XMLoadFloat3(&in.pos);
-			loc = XMVectorSetW(loc, 1.0f);
-			XMVECTOR world = XMVector4Transform(loc, matWorld);
-			XMStoreFloat3(&vo[i].worldPos, world);
-
-			// Clip pos
-			XMVECTOR clip = XMVector4Transform(world, matViewProj);
-			XMStoreFloat4(&vo[i].clipPos, clip);
-			if ( vo[i].clipPos.w<=0.0f )
-			{
-				safe = false;
-				break;
-			}
-			vo[i].invW = 1.0f / vo[i].clipPos.w;
-
-			// World normal
-			XMVECTOR localNormal = XMLoadFloat3(&in.normal);
-			XMVECTOR worldNormal = XMVector3TransformNormal(localNormal, matNormal);
-			worldNormal = XMVector3Normalize(worldNormal);
-			XMStoreFloat3(&vo[i].worldNormal, worldNormal);
-
-			// Albedo
-			vo[i].albedo.x = Clamp(in.color.x * material.color.x);
-			vo[i].albedo.y = Clamp(in.color.y * material.color.y);
-			vo[i].albedo.z = Clamp(in.color.z * material.color.z);
-
-			// Intensity
-			float ndotl = XMVectorGetX(XMVector3Dot(worldNormal, lightDir));
-			ndotl = MAX(0.0f, ndotl);
-			vo[i].intensity = ndotl + m_ambient;
-
-			// Screen pos
-			float ndcX = vo[i].clipPos.x * vo[i].invW;			// [-1,1]
-			float ndcY = vo[i].clipPos.y * vo[i].invW;			// [-1,1]
-			float ndcZ = vo[i].clipPos.z * vo[i].invW;			// [0,1] avec XMMatrixPerspectiveFovLH
-			screen[i].x = (ndcX + 1.0f) * rt.widthHalf;
-			screen[i].y = (1.0f - ndcY) * rt.heightHalf;
-			screen[i].z = Clamp(ndcZ);							// profondeur normalisée 0..1
-		}
-		if ( safe==false )
-			continue;
-
-		// Culling
-		float area = (screen[1].x-screen[0].x) * (screen[2].y-screen[0].y) - (screen[1].y-screen[0].y) * (screen[2].x-screen[0].x);
-		bool isFront = m_cullFrontCCW ? (area>m_cullAreaEpsilon) : (area<-m_cullAreaEpsilon);
-		if ( isFront==false )
-			continue; // back-face or degenerated
-
-		// Pixel shader
-		dc.tri = screen;
-		dc.vo = vo;
-		dc.pMaterial = &material;
-		dc.pTile = pTile ? pTile : &m_tiles[0];
-		dc.depth = depthMode;
-		FillTriangle(dc);
-
-		// Wireframe
-#ifdef CONFIG_WIREFRAME
-		DrawLine((int)screen[0].x, (int)screen[0].y, screen[0].z, (int)screen[1].x, (int)screen[1].y, screen[1].z, WHITE);
-		DrawLine((int)screen[1].x, (int)screen[1].y, screen[1].z, (int)screen[2].x, (int)screen[2].y, screen[2].z, WHITE);
-		DrawLine((int)screen[2].x, (int)screen[2].y, screen[2].z, (int)screen[0].x, (int)screen[0].y, screen[0].z, WHITE);
-#endif
-	}
-}
 
 void cpu_engine::FillTriangle(cpu_drawcall& dc)
 {

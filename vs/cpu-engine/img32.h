@@ -1,7 +1,9 @@
 #pragma once
 
-namespace cpu_ns_img32
+namespace cpu_img32
 {
+
+void Free();
 
 // Premultiplied alpha SRC-over DST blit with clipping.
 // Format: RGBA8 premultiplied (R,G,B already multiplied by A/255), tightly packed (pitch = W*4).
@@ -86,5 +88,7 @@ void Unpremultiply(
     int width, int height);
 
 bool AlphaBlendStraightOverOpaque(const byte* src, int srcW, int srcH, byte* dst, int dstW, int dstH, int srcX, int srcY, int dstX, int dstY, int blitW, int blitH);
+
+void Blur(byte* img, int width, int height, int radius);
 
 }

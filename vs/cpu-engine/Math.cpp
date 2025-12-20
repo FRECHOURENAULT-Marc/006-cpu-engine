@@ -239,7 +239,7 @@ bool RayTriangle(cpu_ray& ray, cpu_triangle& tri, XMFLOAT3& outHit, float* outT 
 	}
 	else
 	{
-		if ( std::fabs(det)<=eps )
+		if ( fabsf(det)<=eps )
 			return false; // parallèle
 		const float invDet = 1.0f / det;
 

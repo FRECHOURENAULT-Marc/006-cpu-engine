@@ -91,7 +91,8 @@ using PS_FUNC							= void(*)(cpu_ps_io& data);
 #define RELPTR(p)						{ if ( (p) ) { (p)->Release(); (p) = nullptr; } }
 #define DELPTR(p)						{ if ( (p) ) { delete (p); (p) = nullptr; } }
 #define DELPTRS(p)						{ if ( (p) ) { delete [] (p); (p) = nullptr; } }
-#define CAPTION(v)						SetWindowText(cpu.GetHWND(), std::to_string(v).c_str());
+#define STR(v)							std::to_string(v)
+#define CAPTION(v)						SetWindowText(cpu.GetHWND(), STR(v).c_str());
 #define ID(s)							GetStateID<s>()
 #define RGBX(r,g,b)						((ui32)(((byte)(r)|((ui16)((byte)(g))<<8))|(((ui16)(byte)(b))<<16))|0xFF000000)
 #define RGBA(r,g,b,a)					((ui32)(((byte)(r)|((ui16)((byte)(g))<<8))|(((ui16)(byte)(b))<<16))|(((ui32)(byte)(a))<<24))
@@ -146,7 +147,8 @@ inline XMFLOAT3 CPU_ORANGE				= { 1.0f, 0.5f, 0.0f };
 #define CPU_DEPTH_RW					4
 
 // Pass
-#define CPU_PASS_CLEAR					10
+#define CPU_PASS_CLEAR_BEGIN			10
+#define CPU_PASS_CLEAR_END				11
 #define CPU_PASS_ENTITY_BEGIN			20
 #define CPU_PASS_ENTITY_END				21
 #define CPU_PASS_PARTICLE_BEGIN			30

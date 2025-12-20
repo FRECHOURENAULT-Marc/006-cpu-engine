@@ -1,7 +1,14 @@
 #include "stdafx.h"
 
-namespace cpu_ns_img32
+namespace cpu_img32
 {
+
+std::vector<byte> g_scratch;
+
+void Free()
+{
+	g_scratch.clear();
+}
 
 void AlphaBlend(
     const byte* src, int srcW, int srcH,
@@ -10,8 +17,8 @@ void AlphaBlend(
     int dstX, int dstY,
     int blitW, int blitH)
 {
-    if (!src || !dst || srcW <= 0 || srcH <= 0 || dstW <= 0 || dstH <= 0) return;
-    if (blitW <= 0 || blitH <= 0) return;
+    if ( src==nullptr || dst==nullptr || srcW <= 0 || srcH <= 0 || dstW <= 0 || dstH <= 0) return;
+    if ( blitW <= 0 || blitH <= 0 ) return;
 
     // Clip
     int w = blitW, h = blitH;
@@ -632,5 +639,160 @@ bool AlphaBlendStraightOverOpaque(const byte* src, int srcW, int srcH, byte* dst
 
 	return true;
 }
+
+// IMPORTANT: width/height are in PIXELS.
+// Buffer layout: BGRA, premultiplied, tightly packed => stride = width*4.
+void Blur(byte* img, int width, int height, int radius)
+{
+    if (!img || width <= 0 || height <= 0 || radius <= 0) return;
+    radius = std::min(radius, 254);
+
+    const int stride = width * 4;
+    const int div = radius * 2 + 1;
+
+    // Scratch for horizontal pass (same size)
+    g_scratch.resize((size_t)height * (size_t)stride);
+    byte* tmp = g_scratch.data();
+
+    // Stack entries (B,G,R,A)
+    struct P { int b,g,r,a; };
+    std::vector<P> stack((size_t)div);
+
+    // Precompute division table for this radius (avoids / in the hot loop)
+    const int divSum = ((div + 1) >> 1) * ((div + 1) >> 1);
+    static std::vector<int> dv;
+    static int dvDivSum = 0;
+    if (dvDivSum != divSum)
+    {
+        dvDivSum = divSum;
+        dv.resize((size_t)256 * (size_t)divSum);
+        for (int i = 0; i < 256 * divSum; ++i) dv[i] = i / divSum;
+    }
+
+    // -------------------------
+    // Horizontal pass: img -> tmp
+    // -------------------------
+    for (int y = 0; y < height; ++y)
+    {
+        const byte* srcRow = img + y * stride;
+        byte* dstRow = tmp + y * stride;
+
+        int sumB=0,sumG=0,sumR=0,sumA=0;
+        int inB=0,inG=0,inR=0,inA=0;
+        int outB=0,outG=0,outR=0,outA=0;
+
+        // init stack with left edge clamped
+        for (int i = -radius; i <= radius; ++i)
+        {
+            const int x = Clamp(i, 0, width - 1);
+            const byte* p = srcRow + x * 4;
+
+            P& s = stack[(size_t)(i + radius)];
+            s.b = p[0]; s.g = p[1]; s.r = p[2]; s.a = p[3];
+
+            const int wgt = radius + 1 - std::abs(i);
+            sumB += s.b * wgt; sumG += s.g * wgt; sumR += s.r * wgt; sumA += s.a * wgt;
+
+            if (i > 0) { inB += s.b; inG += s.g; inR += s.r; inA += s.a; }
+            else       { outB+= s.b; outG+= s.g; outR+= s.r; outA+= s.a; }
+        }
+
+        int stackPtr = radius;
+
+        for (int x = 0; x < width; ++x)
+        {
+            byte* d = dstRow + x * 4;
+            d[0] = (byte)dv[sumB];
+            d[1] = (byte)dv[sumG];
+            d[2] = (byte)dv[sumR];
+            d[3] = (byte)dv[sumA];
+
+            // remove outgoing
+            sumB -= outB; sumG -= outG; sumR -= outR; sumA -= outA;
+
+            int stackStart = stackPtr - radius;
+            if (stackStart < 0) stackStart += div;
+            P& out = stack[(size_t)stackStart];
+
+            outB -= out.b; outG -= out.g; outR -= out.r; outA -= out.a;
+
+            // add incoming (write into outgoing slot)
+            const int xIn = Clamp(x + radius + 1, 0, width - 1);
+            const byte* pIn = srcRow + xIn * 4;
+
+            out.b = pIn[0]; out.g = pIn[1]; out.r = pIn[2]; out.a = pIn[3];
+
+            inB += out.b; inG += out.g; inR += out.r; inA += out.a;
+            sumB += inB;  sumG += inG;  sumR += inR;  sumA += inA;
+
+            // advance
+            stackPtr = (stackPtr + 1) % div;
+            P& inPix = stack[(size_t)stackPtr];
+
+            outB += inPix.b; outG += inPix.g; outR += inPix.r; outA += inPix.a;
+            inB  -= inPix.b; inG  -= inPix.g; inR  -= inPix.r; inA  -= inPix.a;
+        }
+    }
+
+    // -------------------------
+    // Vertical pass: tmp -> img
+    // -------------------------
+    for (int x = 0; x < width; ++x)
+    {
+        int sumB=0,sumG=0,sumR=0,sumA=0;
+        int inB=0,inG=0,inR=0,inA=0;
+        int outB=0,outG=0,outR=0,outA=0;
+
+        // init stack with top edge clamped
+        for (int i = -radius; i <= radius; ++i)
+        {
+            const int y = Clamp(i, 0, height - 1);
+            const byte* p = tmp + y * stride + x * 4;
+
+            P& s = stack[(size_t)(i + radius)];
+            s.b = p[0]; s.g = p[1]; s.r = p[2]; s.a = p[3];
+
+            const int wgt = radius + 1 - std::abs(i);
+            sumB += s.b * wgt; sumG += s.g * wgt; sumR += s.r * wgt; sumA += s.a * wgt;
+
+            if (i > 0) { inB += s.b; inG += s.g; inR += s.r; inA += s.a; }
+            else       { outB+= s.b; outG+= s.g; outR+= s.r; outA+= s.a; }
+        }
+
+        int stackPtr = radius;
+
+        for (int y = 0; y < height; ++y)
+        {
+            byte* d = img + y * stride + x * 4;
+            d[0] = (byte)dv[sumB];
+            d[1] = (byte)dv[sumG];
+            d[2] = (byte)dv[sumR];
+            d[3] = (byte)dv[sumA];
+
+            sumB -= outB; sumG -= outG; sumR -= outR; sumA -= outA;
+
+            int stackStart = stackPtr - radius;
+            if (stackStart < 0) stackStart += div;
+            P& out = stack[(size_t)stackStart];
+
+            outB -= out.b; outG -= out.g; outR -= out.r; outA -= out.a;
+
+            const int yIn = Clamp(y + radius + 1, 0, height - 1);
+            const byte* pIn = tmp + yIn * stride + x * 4;
+
+            out.b = pIn[0]; out.g = pIn[1]; out.r = pIn[2]; out.a = pIn[3];
+
+            inB += out.b; inG += out.g; inR += out.r; inA += out.a;
+            sumB += inB;  sumG += inG;  sumR += inR;  sumA += inA;
+
+            stackPtr = (stackPtr + 1) % div;
+            P& inPix = stack[(size_t)stackPtr];
+
+            outB += inPix.b; outG += inPix.g; outR += inPix.r; outA += inPix.a;
+            inB  -= inPix.b; inG  -= inPix.g; inR  -= inPix.r; inA  -= inPix.a;
+        }
+    }
+}
+
 
 }

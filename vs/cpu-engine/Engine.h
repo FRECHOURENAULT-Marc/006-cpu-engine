@@ -21,15 +21,25 @@ public:
 	void FixWindow();
 	void FixDevice();
 	HWND GetHWND() { return m_hWnd; }
-	cpu_rt* GetMainRT() { return &m_mainRT; }
-	cpu_rt* SetRT(cpu_rt* pRT) { cpu_rt* pOld = m_pRT; m_pRT = pRT; return pOld; }
-	cpu_rt* GetRT() { return m_pRT; }
 	cpu_input& GetInput() { return m_input; }
 	float GetTotalTime() { return m_totalTime; }
 	float GetDeltaTime() { return m_deltaTime; };
 	cpu_particle_data* GetParticleData() { return &m_particleData; }
 	cpu_particle_physics* GetParticlePhysics() { return &m_particlePhysics; }
 	int NextTile() { return m_nextTile.AddOne(); }
+
+	cpu_rt* SetMainRT(bool copyDepth = false);
+	cpu_rt* GetMainRT() { return &m_mainRT; }
+	cpu_rt* SetRT(cpu_rt* pRT, bool copyDepth = false);
+	cpu_rt* GetRT() { return m_pRT; }
+	void CopyDepth(cpu_rt* pRT);
+	void AlphaBlend(cpu_rt* pRT);
+	void Blur(int radius);
+	void ClearColor();
+	void ClearColor(XMFLOAT3& rgb);
+	void ClearSky();
+	void ClearDepth();
+	void DrawMesh(cpu_mesh* pMesh, cpu_transform* pTransform, cpu_material* pMaterial, int depthMode = CPU_DEPTH_RW, cpu_tile* pTile = nullptr);
 
 	template <typename T>
 	cpu_fsm<T>* CreateFSM(T* pInstance);
@@ -92,11 +102,6 @@ private:
 	void Render_UI();
 	void Render_Cursor();
 
-	void Clear();
-	void ClearDepth();
-	void Fill(XMFLOAT3& rgb);
-	void FillSky();
-	void DrawMesh(cpu_mesh* pMesh, cpu_transform* pTransform, cpu_material* pMaterial, int depthMode = CPU_DEPTH_RW, cpu_tile* pTile = nullptr);
 	void FillTriangle(cpu_drawcall& dc);
 	static void PixelShader(cpu_ps_io& io);
 

@@ -1,6 +1,6 @@
 #include "stdafx.h"
 
-namespace cpu_ns_png32
+namespace cpu_png32
 {
 /* =============================================================
    1. MINI DECOMPRESSEUR DEFLATE (STRICT MINIMUM)
