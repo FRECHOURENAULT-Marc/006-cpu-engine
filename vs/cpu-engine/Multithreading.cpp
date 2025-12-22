@@ -98,6 +98,13 @@ void cpu_job_entity::OnJob(int iTile)
 	cpu.Render_TileEntities(iTile);
 }
 
+void cpu_job_particle_physics::OnJob(int iTile)
+{
+	int min, max;
+	cpu.GetParticleRange(min, max, iTile);
+	cpu.GetParticleData()->UpdatePhysics(min, max);
+}
+
 void cpu_job_particle_space::OnJob(int iTile)
 {
 	cpu.Render_AssignParticleTile(iTile);

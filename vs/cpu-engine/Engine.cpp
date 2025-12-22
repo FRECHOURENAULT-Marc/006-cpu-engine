@@ -36,6 +36,7 @@ void cpu_engine::Free()
 	
 	// Jobs
 	m_entityJobs.clear();
+	m_particlePhysicsJobs.clear();
 	m_particleSpaceJobs.clear();
 	m_particleRenderJobs.clear();
 	
@@ -185,11 +186,13 @@ void cpu_engine::Initialize(HINSTANCE hInstance, int renderWidth, int renderHeig
 
 	// Jobs
 	m_entityJobs.resize(m_threadCount);
+	m_particlePhysicsJobs.resize(m_threadCount);
 	m_particleSpaceJobs.resize(m_threadCount);
 	m_particleRenderJobs.resize(m_threadCount);
 	for ( int i=0 ; i<m_threadCount ; i++ )
 	{
 		m_entityJobs[i].Create(&m_threads[i]);
+		m_particlePhysicsJobs[i].Create(&m_threads[i]);
 		m_particleSpaceJobs[i].Create(&m_threads[i]);
 		m_particleRenderJobs[i].Create(&m_threads[i]);
 	}
@@ -285,6 +288,14 @@ void cpu_engine::FixDevice()
 	props.dpiY = 96.0f;
 	m_pRenderTarget->CreateBitmap(renderSize, props, &m_pBitmap);
 #endif
+}
+
+void cpu_engine::GetParticleRange(int& min, int& max, int iTile)
+{
+	int count = m_particleData.alive / m_tileCount;
+	int remainder = m_particleData.alive % m_tileCount;
+	min = iTile * count + MIN(iTile, remainder);
+	max = min + count + (iTile<remainder ? 1 : 0);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1030,8 +1041,11 @@ void cpu_engine::Update_Particles()
 		pEmitter->Update();
 	}
 
-	// Particles
-	m_particleData.Update();
+	// Particles: age
+	m_particleData.UpdateAge();
+
+	// Particles: tiles (MT)
+	JOBS(m_particlePhysicsJobs);
 }
 
 void cpu_engine::Update_Purge()
@@ -1228,13 +1242,11 @@ void cpu_engine::Render_AssignParticleTile(int iTileForAssign)
 	cpu_rt& rt = *GetRT();
 	cpu_tile& tile = m_tiles[iTileForAssign];
 
-	int count = m_particleData.alive / m_tileCount;
-	int remainder = m_particleData.alive % m_tileCount;
-	int iStart = iTileForAssign * count + MIN(iTileForAssign, remainder);
-	int iMax = iStart + count + (iTileForAssign<remainder ? 1 : 0);
+	int min, max;
+	GetParticleRange(min, max, iTileForAssign);
 
 	XMFLOAT4X4& vp = m_camera.matViewProj;
-	for ( int i=iStart ; i<iMax ; i++ )
+	for ( int i=min ; i<max ; i++ )
 	{
 		float x = m_particleData.px[i];
 		float y = m_particleData.py[i];

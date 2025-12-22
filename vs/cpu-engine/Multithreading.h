@@ -85,6 +85,12 @@ public:
 	void OnJob(int iTile) override;
 };
 
+class cpu_job_particle_physics : public cpu_job
+{
+public:
+	void OnJob(int iTile) override;
+};
+
 class cpu_job_particle_space : public cpu_job
 {
 public:

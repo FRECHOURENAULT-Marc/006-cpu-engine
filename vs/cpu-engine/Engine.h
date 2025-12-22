@@ -27,6 +27,7 @@ public:
 	cpu_particle_data* GetParticleData() { return &m_particleData; }
 	cpu_particle_physics* GetParticlePhysics() { return &m_particlePhysics; }
 	int NextTile() { return m_nextTile.AddOne(); }
+	void GetParticleRange(int& min, int& max, int iTile);
 
 	cpu_rt* SetMainRT(bool copyDepth = true);
 	cpu_rt* GetMainRT() { return &m_mainRT; }
@@ -149,6 +150,7 @@ private:
 	int m_threadCount;
 	std::vector<cpu_thread_job> m_threads;
 	std::vector<cpu_job_entity> m_entityJobs;
+	std::vector<cpu_job_particle_physics> m_particlePhysicsJobs;
 	std::vector<cpu_job_particle_space> m_particleSpaceJobs;
 	std::vector<cpu_job_particle_render> m_particleRenderJobs;
 	cpu_atomic<int> m_nextTile;
