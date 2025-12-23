@@ -28,7 +28,7 @@
 #include <thread>
 #include <functional>
 #include <cmath>
-//#include <immintrin.h> // AVX2
+#include <emmintrin.h>
 #ifdef _DEBUG
 	#include <crtdbg.h>
 #endif

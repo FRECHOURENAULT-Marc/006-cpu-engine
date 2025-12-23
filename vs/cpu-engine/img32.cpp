@@ -33,84 +33,6 @@ void AlphaBlend(
 	// If src and dst pointers are identical (same surface) and regions overlap, behavior is undefined for blending.
 	// If you need self-blend with overlap, you must handle it with a temp buffer (not done here for speed).
 
-#if BLIT_AVX2
-	const __m256i zero = _mm256_setzero_si256();
-	const __m256i v255 = _mm256_set1_epi16(255);
-
-	// Shuffle mask to replicate A into RGBA lanes within each 128-bit half after unpack:
-	// After unpacklo/hi_epi8: [R0 G0 B0 A0 R1 G1 B1 A1 ...] as u16
-	const __m256i shufA = _mm256_setr_epi8(
-		6,7, 6,7, 6,7, 6,7,   14,15, 14,15, 14,15, 14,15,
-		6,7, 6,7, 6,7, 6,7,   14,15, 14,15, 14,15, 14,15
-	);
-
-	for (int y = 0; y < h; ++y)
-	{
-		const byte* sRow = src + (srcY + y) * srcPitch + srcX * 4;
-		byte* dRow = dst + (dstY + y) * dstPitch + dstX * 4;
-
-		const int rowBytes = w * 4;
-		int xBytes = 0;
-
-		// 8 pixels / 32 bytes per iter
-		for (; xBytes + 32 <= rowBytes; xBytes += 32)
-		{
-			__m256i s8 = _mm256_loadu_si256((const __m256i*)(sRow + xBytes));
-			__m256i d8 = _mm256_loadu_si256((const __m256i*)(dRow + xBytes));
-
-			__m256i sLo = _mm256_unpacklo_epi8(s8, zero);
-			__m256i sHi = _mm256_unpackhi_epi8(s8, zero);
-			__m256i dLo = _mm256_unpacklo_epi8(d8, zero);
-			__m256i dHi = _mm256_unpackhi_epi8(d8, zero);
-
-			__m256i aLo = _mm256_shuffle_epi8(sLo, shufA);
-			__m256i aHi = _mm256_shuffle_epi8(sHi, shufA);
-
-			__m256i invALo = _mm256_sub_epi16(v255, aLo);
-			__m256i invAHi = _mm256_sub_epi16(v255, aHi);
-
-			// If all invA == 0 => all alpha == 255 for this block: out = src (fast)
-			if (_mm256_testz_si256(invALo, invALo) && _mm256_testz_si256(invAHi, invAHi))
-			{
-				_mm256_storeu_si256((__m256i*)(dRow + xBytes), s8);
-				continue;
-			}
-
-			// out = src + dst * invA / 255  (premul SRC-over)
-			__m256i dMulLo = _mm256_mullo_epi16(dLo, invALo);
-			__m256i dMulHi = _mm256_mullo_epi16(dHi, invAHi);
-
-			__m256i dScaledLo = div255_epu16(dMulLo);
-			__m256i dScaledHi = div255_epu16(dMulHi);
-
-			__m256i outLo = _mm256_add_epi16(sLo, dScaledLo);
-			__m256i outHi = _mm256_add_epi16(sHi, dScaledHi);
-
-			__m256i out8 = _mm256_packus_epi16(outLo, outHi);
-			_mm256_storeu_si256((__m256i*)(dRow + xBytes), out8);
-		}
-
-		// Tail scalar pixels
-		for (; xBytes < rowBytes; xBytes += 4)
-		{
-			const byte* sp = sRow + xBytes;
-			byte* dp = dRow + xBytes;
-
-			uint32_t sr = sp[0], sg = sp[1], sb = sp[2], sa = sp[3];
-			uint32_t dr = dp[0], dg = dp[1], db = dp[2], da = dp[3];
-
-			uint32_t invA = 255u - sa;
-
-			dp[0] = (byte)std::min(255u, sr + div255_u32(dr * invA));
-			dp[1] = (byte)std::min(255u, sg + div255_u32(dg * invA));
-			dp[2] = (byte)std::min(255u, sb + div255_u32(db * invA));
-			dp[3] = (byte)std::min(255u, sa + div255_u32(da * invA));
-		}
-	}
-	return;
-#endif
-
-#if BLIT_SSE2
 	const __m128i zero = _mm_setzero_si128();
 	const __m128i v255 = _mm_set1_epi16(255);
 
@@ -180,31 +102,6 @@ void AlphaBlend(
 		{
 			const byte* sp = sRow + xBytes;
 			byte* dp = dRow + xBytes;
-
-			uint32_t sr = sp[0], sg = sp[1], sb = sp[2], sa = sp[3];
-			uint32_t dr = dp[0], dg = dp[1], db = dp[2], da = dp[3];
-
-			uint32_t invA = 255u - sa;
-
-			dp[0] = (byte)std::min(255u, sr + div255_u32(dr * invA));
-			dp[1] = (byte)std::min(255u, sg + div255_u32(dg * invA));
-			dp[2] = (byte)std::min(255u, sb + div255_u32(db * invA));
-			dp[3] = (byte)std::min(255u, sa + div255_u32(da * invA));
-		}
-	}
-	return;
-#endif
-
-	// Scalar fallback
-	for (int y = 0; y < h; ++y)
-	{
-		const byte* sRow = src + (srcY + y) * srcPitch + srcX * 4;
-		byte* dRow = dst + (dstY + y) * dstPitch + dstX * 4;
-
-		for (int x = 0; x < w; ++x)
-		{
-			const byte* sp = sRow + x * 4;
-			byte* dp = dRow + x * 4;
 
 			uint32_t sr = sp[0], sg = sp[1], sb = sp[2], sa = sp[3];
 			uint32_t dr = dp[0], dg = dp[1], db = dp[2], da = dp[3];

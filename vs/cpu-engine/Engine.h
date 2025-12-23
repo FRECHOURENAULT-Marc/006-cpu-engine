@@ -15,7 +15,7 @@ public:
 	static cpu_engine* GetInstance() { return s_pEngine; }
 	static cpu_engine& GetInstanceRef() { return *s_pEngine; }
 
-	void Initialize(HINSTANCE hInstance, int renderWidth, int renderHeight, bool fullscreen = false, bool hardwareBilinear = false, bool amigaStyle = false);
+	void Initialize(HINSTANCE hInstance, int renderWidth, int renderHeight, bool fullscreen = false, bool amigaStyle = false);
 	void Run();
 	void Quit();
 	void FixWindow();
@@ -164,7 +164,6 @@ private:
 	int m_windowWidth;
 	int m_windowHeight;
 	RECT m_rcFit;
-	bool m_bilinear;
 
 	// Surface
 #ifdef CONFIG_GPU

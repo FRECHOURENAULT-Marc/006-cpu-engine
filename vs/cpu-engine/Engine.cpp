@@ -68,7 +68,7 @@ void cpu_engine::Free()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void cpu_engine::Initialize(HINSTANCE hInstance, int renderWidth, int renderHeight, bool fullscreen, bool hardwareBilinear, bool amigaStyle)
+void cpu_engine::Initialize(HINSTANCE hInstance, int renderWidth, int renderHeight, bool fullscreen, bool amigaStyle)
 {
 	if ( m_hInstance )
 		return;
@@ -77,7 +77,6 @@ void cpu_engine::Initialize(HINSTANCE hInstance, int renderWidth, int renderHeig
 	m_hInstance = hInstance;
 	m_windowWidth = renderWidth;
 	m_windowHeight = renderHeight;
-	m_bilinear = hardwareBilinear;
 	WNDCLASS wc = {};
 	wc.lpfnWndProc = WindowProc;
 	wc.hInstance = hInstance;
@@ -1603,10 +1602,7 @@ void cpu_engine::Present()
 	m_pRenderTarget->Clear(D2D1::ColorF(D2D1::ColorF::Black));
 	m_pBitmap->CopyFromMemory(nullptr, rt.colorBuffer.data(), rt.width*4);
 	D2D1_RECT_F destRect = D2D1::RectF((float)m_rcFit.left, (float)m_rcFit.top, (float)m_rcFit.right, (float)m_rcFit.bottom);	
-	if ( m_bilinear )
-		m_pRenderTarget->DrawBitmap(m_pBitmap, destRect, 1.0f, D2D1_BITMAP_INTERPOLATION_MODE_LINEAR, NULL);
-	else
-		m_pRenderTarget->DrawBitmap(m_pBitmap, destRect, 1.0f, D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR, NULL);
+	m_pRenderTarget->DrawBitmap(m_pBitmap, destRect, 1.0f, D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR, NULL);
 	HRESULT hr = m_pRenderTarget->EndDraw();
 	if ( hr==D2DERR_RECREATE_TARGET )
 	{
