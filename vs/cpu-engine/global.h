@@ -13,8 +13,10 @@ void Run(HINSTANCE hInstance, int renderWidth, int renderHeight, bool fullscreen
 	_CrtMemCheckpoint(&memStateInit);
 #endif
 
+	MSG msg;
+	while ( PeekMessage(&msg, NULL, 0, 0, PM_REMOVE) );
 	E* pEngine = new E;
-	if ( pEngine->Initialize(hInstance, renderWidth, renderHeight, fullscreen, amigaStyle) )
+	if ( pEngine->Create(hInstance, renderWidth, renderHeight, fullscreen, amigaStyle) )
 	{
 		A* pApp = new A;
 		pEngine->Run();

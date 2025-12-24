@@ -2,6 +2,11 @@
 
 cpu_input::cpu_input()
 {
+	Reset();
+}
+
+void cpu_input::Reset()
+{
 	memset(keys, 0, 256);
 }
 

@@ -14,12 +14,10 @@ public:
 
 	static cpu_engine& GetInstance() { return *s_pEngine; }
 
-	bool Initialize(HINSTANCE hInstance, int renderWidth, int renderHeight, bool fullscreen, bool amigaStyle);
 	cpu_callback* GetCallback() { return &m_callback; }
+	bool Create(HINSTANCE hInstance, int renderWidth, int renderHeight, bool fullscreen, bool amigaStyle);
 	void Run();
 	void Quit();
-	void FixWindow();
-	void FixDevice();
 
 	HWND GetHWND() { return m_hWnd; }
 	cpu_input* Input() { return &m_input; }
@@ -78,6 +76,10 @@ public:
 	void DrawLine(int x0, int y0, float z0, int x1, int y1, float z1, XMFLOAT3& color);
 
 private:
+	void End();
+	void FixWindow();
+	void FixDevice();
+
 	bool Time();
 
 	void Update();
@@ -131,8 +133,6 @@ private:
 	ID2D1HwndRenderTarget* m_pRenderTarget;
 	ID2D1Bitmap* m_pBitmap;
 #else
-	HDC m_hDC;
-	HBRUSH m_hBrush;
 	BITMAPINFO m_bi;
 #endif
 

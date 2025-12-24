@@ -17,6 +17,7 @@ private:
 public:
 	cpu_input();
 
+	void Reset();
 	bool IsKey(int key);
 	bool IsKeyDown(int key);
 	bool IsKeyUp(int key);

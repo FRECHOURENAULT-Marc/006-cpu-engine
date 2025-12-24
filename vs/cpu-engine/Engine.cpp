@@ -5,13 +5,28 @@ cpu_engine::cpu_engine()
 	s_pEngine = this;
 	m_hInstance = nullptr;
 	m_hWnd = nullptr;
+}
 
+cpu_engine::~cpu_engine()
+{
+	assert( m_hInstance==nullptr );
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+bool cpu_engine::Create(HINSTANCE hInstance, int renderWidth, int renderHeight, bool fullscreen, bool amigaStyle)
+{
+	if ( m_hInstance )
+		return false;
+
+	// Present
 #ifdef CONFIG_GPU
 	m_pD2DFactory = nullptr;
 	m_pRenderTarget = nullptr;
 	m_pBitmap = nullptr;
 #else
-	m_hDC = nullptr;
 	m_bi.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
 	m_bi.bmiHeader.biWidth = 0;
 	m_bi.bmiHeader.biHeight = 0;
@@ -19,64 +34,6 @@ cpu_engine::cpu_engine()
 	m_bi.bmiHeader.biBitCount = 32;
 	m_bi.bmiHeader.biCompression = BI_RGB;
 #endif
-
-	m_callback.onStart.Set(this, &cpu_engine::OnStart);
-	m_callback.onUpdate.Set(this, &cpu_engine::OnUpdate);
-	m_callback.onExit.Set(this, &cpu_engine::OnExit);
-	m_callback.onRender.Set(this, &cpu_engine::OnRender);
-}
-
-cpu_engine::~cpu_engine()
-{
-	Free();
-}
-
-void cpu_engine::Free()
-{
-	if ( m_hInstance==nullptr )
-		return;
-
-	// Image
-	cpu_img32::Free();
-	
-	// Jobs
-	m_entityJobs.clear();
-	m_particlePhysicsJobs.clear();
-	m_particleSpaceJobs.clear();
-	m_particleRenderJobs.clear();
-	
-	// Surface
-#ifdef CONFIG_GPU
-	CPU_RELEASE(m_pBitmap);
-	CPU_RELEASE(m_pRenderTarget);
-	CPU_RELEASE(m_pD2DFactory);
-#else
-	if ( m_hDC )
-	{
-		SelectObject(m_hDC, m_hBrush);
-		ReleaseDC(m_hWnd, m_hDC);
-		m_hDC = nullptr;
-	}
-#endif
-
-	// Window
-	if ( m_hWnd )
-	{
-		DestroyWindow(m_hWnd);
-		m_hWnd = nullptr;
-	}
-	UnregisterClassA("RETRO_ENGINE", m_hInstance);
-	m_hInstance = nullptr;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-bool cpu_engine::Initialize(HINSTANCE hInstance, int renderWidth, int renderHeight, bool fullscreen, bool amigaStyle)
-{
-	if ( m_hInstance )
-		return false;
 
 	// Window
 	m_hInstance = hInstance;
@@ -88,8 +45,6 @@ bool cpu_engine::Initialize(HINSTANCE hInstance, int renderWidth, int renderHeig
 	wc.lpszClassName = "cpu-engine";
 	wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
 	RegisterClassA(&wc);
-	MSG msg;
-	while ( PeekMessage(&msg, NULL, 0, 0, PM_REMOVE) );
 	if ( fullscreen )
 	{
 		RECT rect = { 0, 0, ::GetSystemMetrics(SM_CXSCREEN), ::GetSystemMetrics(SM_CYSCREEN) };
@@ -124,9 +79,6 @@ bool cpu_engine::Initialize(HINSTANCE hInstance, int renderWidth, int renderHeig
 		return false;
 	FixDevice();
 #else
-	m_hDC = GetDC(m_hWnd);
-	SetStretchBltMode(m_hDC, COLORONCOLOR);
-	m_hBrush = (HBRUSH)SelectObject(m_hDC, GetStockObject(BLACK_BRUSH));
 	m_bi.bmiHeader.biWidth = m_mainRT.width;
 	m_bi.bmiHeader.biHeight = -m_mainRT.height;
 #endif
@@ -208,45 +160,45 @@ bool cpu_engine::Initialize(HINSTANCE hInstance, int renderWidth, int renderHeig
 		m_particleRenderJobs[i].Create(&m_threads[i]);
 	}
 
+	// Callback
+	m_callback.onStart.Set(this, &cpu_engine::OnStart);
+	m_callback.onUpdate.Set(this, &cpu_engine::OnUpdate);
+	m_callback.onExit.Set(this, &cpu_engine::OnExit);
+	m_callback.onRender.Set(this, &cpu_engine::OnRender);
+
+	// Camera
+	m_camera.aspectRatio = m_mainRT.aspectRatio;
+	m_camera.height = m_camera.width / m_camera.aspectRatio;
+	m_camera.UpdateProjection();
+
 	// Window
+	FixWindow();
 	ShowWindow(m_hWnd, SW_SHOW);
 	return true;
 }
 
 void cpu_engine::Run()
 {
-	// Camera
-	m_camera.aspectRatio = m_mainRT.aspectRatio;
-	m_camera.height = m_camera.width / m_camera.aspectRatio;
-	m_camera.UpdateProjection();
-	FixWindow();
+	// Threads
+	for ( int i=0 ; i<m_threadCount ; i++ )
+		m_threads[i].Run();
 
-	// Start
+	// Reset
+	m_input.Reset();
 	m_systime = timeGetTime();
 	m_totalTime = 0.0f;
 	m_deltaTime = 0.0f;
 	m_fpsTime = 0;
 	m_fpsCount = 0;
 	m_stats = {};
-	m_callback.onStart.Call();
 
-	// Threads
-	for ( int i=0 ; i<m_threadCount ; i++ )
-		m_threads[i].Run();
+	// Start
+	m_callback.onStart.Call();
 
 	// Loop
 	MSG msg = {};
-	while ( msg.message!=WM_QUIT )
+	while ( m_hWnd )
 	{
-		// Windows API
-		while ( PeekMessage(&msg, NULL, 0, 0, PM_REMOVE) )
-		{
-			if ( msg.message==WM_QUIT )
-				break;
-			TranslateMessage(&msg);
-			DispatchMessage(&msg);
-		}
-
 		// Time
 		if ( Time()==false )
 			continue;
@@ -256,52 +208,40 @@ void cpu_engine::Run()
 
 		// Render
 		Render();
+
+		// Windows API
+		while ( PeekMessage(&msg, NULL, 0, 0, PM_REMOVE) )
+		{
+			TranslateMessage(&msg);
+			DispatchMessage(&msg);
+		}
 	}
+
+	// End
+	m_callback.onExit.Call();
 
 	// Threads
 	for ( int i=0 ; i<m_threadCount ; i++ )
 		m_threads[i].Stop();
 
-	// End
-	m_callback.onExit.Call();
+	// Jobs
+	m_entityJobs.clear();
+	m_particlePhysicsJobs.clear();
+	m_particleSpaceJobs.clear();
+	m_particleRenderJobs.clear();
+
+	// Image
+	cpu_img32::Free();
+
+	// Window
+	UnregisterClassA("cpu-engine", m_hInstance);
+	m_hInstance = nullptr;
 }
 
 void cpu_engine::Quit()
 {
-	PostQuitMessage(0);
-}
-
-void cpu_engine::FixWindow()
-{
 	if ( m_hWnd )
-	{
-		RECT rc;
-		GetClientRect(m_hWnd, &rc);
-		m_windowWidth = rc.right-rc.left;
-		m_windowHeight = rc.bottom-rc.top;
-		m_rcFit = cpu::ComputeAspectFitRect(m_mainRT.width, m_mainRT.height, m_windowWidth, m_windowHeight);
-	}
-
-#ifdef CONFIG_GPU
-	if ( m_pRenderTarget )
-		m_pRenderTarget->Resize(D2D1::SizeU(m_windowWidth, m_windowHeight));
-#endif
-}
-
-void cpu_engine::FixDevice()
-{
-#ifdef CONFIG_GPU
-	D2D1_SIZE_U size = D2D1::SizeU(m_windowWidth, m_windowHeight);
-	m_pD2DFactory->CreateHwndRenderTarget(D2D1::RenderTargetProperties(), D2D1::HwndRenderTargetProperties(m_hWnd, size), &m_pRenderTarget);
-	
-	cpu_rt& rt = *GetRT();
-	D2D1_SIZE_U renderSize = D2D1::SizeU(rt.width, rt.height);
-	D2D1_BITMAP_PROPERTIES props;
-	props.pixelFormat = D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE);
-	props.dpiX = 96.0f;
-	props.dpiY = 96.0f;
-	m_pRenderTarget->CreateBitmap(renderSize, props, &m_pBitmap);
-#endif
+		PostMessage(m_hWnd, WM_CLOSE, 0, 0);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -964,18 +904,37 @@ void cpu_engine::DrawLine(int x0, int y0, float z0, int x1, int y1, float z1, XM
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-LRESULT cpu_engine::OnWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+void cpu_engine::FixWindow()
 {
-	switch ( message )
-	{
-	case WM_DESTROY:
-		PostQuitMessage(0);
-		break;
-	case WM_SIZE:
-		FixWindow();
-		break;
-	}
-	return DefWindowProc(hWnd, message, wParam, lParam);
+	if ( m_hWnd==nullptr )
+		return;
+
+	RECT rc;
+	GetClientRect(m_hWnd, &rc);
+	m_windowWidth = rc.right-rc.left;
+	m_windowHeight = rc.bottom-rc.top;
+	m_rcFit = cpu::ComputeAspectFitRect(m_mainRT.width, m_mainRT.height, m_windowWidth, m_windowHeight);
+
+#ifdef CONFIG_GPU
+	if ( m_pRenderTarget )
+		m_pRenderTarget->Resize(D2D1::SizeU(m_windowWidth, m_windowHeight));
+#endif
+}
+
+void cpu_engine::FixDevice()
+{
+#ifdef CONFIG_GPU
+	D2D1_SIZE_U size = D2D1::SizeU(m_windowWidth, m_windowHeight);
+	m_pD2DFactory->CreateHwndRenderTarget(D2D1::RenderTargetProperties(), D2D1::HwndRenderTargetProperties(m_hWnd, size), &m_pRenderTarget);
+	
+	cpu_rt& rt = *GetRT();
+	D2D1_SIZE_U renderSize = D2D1::SizeU(rt.width, rt.height);
+	D2D1_BITMAP_PROPERTIES props;
+	props.pixelFormat = D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_IGNORE);
+	props.dpiX = 96.0f;
+	props.dpiY = 96.0f;
+	m_pRenderTarget->CreateBitmap(renderSize, props, &m_pBitmap);
+#endif
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1627,22 +1586,27 @@ void cpu_engine::Present()
 
 #else
 
+	HDC hDC = GetDC(m_hWnd);
+	SetStretchBltMode(hDC, COLORONCOLOR);
+	HBRUSH hBrush = (HBRUSH)SelectObject(hDC, GetStockObject(BLACK_BRUSH));
 	int width = m_rcFit.right - m_rcFit.left;
 	int height = m_rcFit.bottom - m_rcFit.top;
 	if ( width==rt.width && height==rt.height )
-		SetDIBitsToDevice(m_hDC, m_rcFit.left, m_rcFit.top, rt.width, rt.height, 0, 0, 0, rt.height, rt.colorBuffer.data(), &m_bi, DIB_RGB_COLORS);
+		SetDIBitsToDevice(hDC, m_rcFit.left, m_rcFit.top, rt.width, rt.height, 0, 0, 0, rt.height, rt.colorBuffer.data(), &m_bi, DIB_RGB_COLORS);
 	else
 	{
-		StretchDIBits(m_hDC, m_rcFit.left, m_rcFit.top, width, height, 0, 0, rt.width, rt.height, rt.colorBuffer.data(), &m_bi, DIB_RGB_COLORS, SRCCOPY);
+		StretchDIBits(hDC, m_rcFit.left, m_rcFit.top, width, height, 0, 0, rt.width, rt.height, rt.colorBuffer.data(), &m_bi, DIB_RGB_COLORS, SRCCOPY);
 		if ( m_rcFit.left )
-			PatBlt(m_hDC, 0, 0, m_rcFit.left, m_windowHeight, PATCOPY);
+			PatBlt(hDC, 0, 0, m_rcFit.left, m_windowHeight, PATCOPY);
 		if ( m_rcFit.right<m_windowWidth )
-			PatBlt(m_hDC, m_rcFit.right, 0, m_windowWidth-m_rcFit.right, m_windowHeight, PATCOPY);
+			PatBlt(hDC, m_rcFit.right, 0, m_windowWidth-m_rcFit.right, m_windowHeight, PATCOPY);
 		if ( m_rcFit.top )
-			PatBlt(m_hDC, 0, 0, m_windowWidth, m_rcFit.top, PATCOPY);
+			PatBlt(hDC, 0, 0, m_windowWidth, m_rcFit.top, PATCOPY);
 		if ( m_rcFit.bottom<m_windowHeight )
-			PatBlt(m_hDC, 0, m_rcFit.bottom, m_windowWidth, m_windowHeight-m_rcFit.bottom, PATCOPY);
+			PatBlt(hDC, 0, m_rcFit.bottom, m_windowWidth, m_windowHeight-m_rcFit.bottom, PATCOPY);
 	}
+	SelectObject(hDC, hBrush);
+	ReleaseDC(m_hWnd, hDC);
 
 #endif
 }
@@ -1656,6 +1620,24 @@ LRESULT cpu_engine::WindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 	cpu_engine* pEngine = (cpu_engine*)GetWindowLongPtr(hWnd, GWLP_USERDATA);
 	if ( pEngine )
 		return pEngine->OnWindowProc(hWnd, message, wParam, lParam);
+	return DefWindowProc(hWnd, message, wParam, lParam);
+}
 
+LRESULT cpu_engine::OnWindowProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+{
+	switch ( message )
+	{
+	case WM_DESTROY:
+		m_hWnd = nullptr;
+#ifdef CONFIG_GPU
+		CPU_RELEASE(m_pBitmap);
+		CPU_RELEASE(m_pRenderTarget);
+		CPU_RELEASE(m_pD2DFactory);
+#endif
+		break;
+	case WM_SIZE:
+		FixWindow();
+		break;
+	}
 	return DefWindowProc(hWnd, message, wParam, lParam);
 }
