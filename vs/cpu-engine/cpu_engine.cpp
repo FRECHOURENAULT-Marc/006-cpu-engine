@@ -126,7 +126,6 @@ void cpu_engine::Run()
 	// Reset
 	cpuTime.Reset();
 	cpuInput.Reset();
-	m_stats = {};
 
 	// Start
 	m_callback.onStart.Call();

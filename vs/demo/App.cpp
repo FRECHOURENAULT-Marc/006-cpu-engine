@@ -53,7 +53,7 @@ void App::OnStart()
 	// YOUR CODE HERE
 
 	// Resources
-	m_font.Create(10);
+	m_font.Create(12);
 	m_texture.Load("bird_amiga.png");
 	m_meshShip.CreateSpaceship();
 	m_meshMissile.CreateSphere(0.5f);
@@ -87,7 +87,7 @@ void App::OnStart()
 	// Ship
 	m_pShip = new Ship;
 	m_pShip->Create(&m_meshShip, &m_materialShip);
-	m_pShip->GetFSM()->ToState(CPU_ID(StateIdle));
+	m_pShip->GetFSM()->ToState(CPU_ID(StateShipIdle));
 
 	// Particle
 	cpuEngine.GetParticleData()->Create(1000000);
@@ -195,7 +195,7 @@ void App::OnRender(int pass)
 		{
 			// Debug
 			cpu_stats& stats = *cpuEngine.GetStats();
-			std::string info = CPU_STR(stats.fps) + " fps, ";
+			std::string info = CPU_STR(cpuTime.fps) + " fps, ";
 			info += CPU_STR(stats.drawnTriangleCount) + " triangles, ";
 			info += CPU_STR(stats.clipEntityCount) + " clipped entities\n";
 			info += CPU_STR(m_missiles.size()) + " missiles, ";
@@ -258,9 +258,9 @@ void Ship::Create(cpu_mesh* pMesh, cpu_material* pMaterial)
 	m_pEntity->transform.pos.y = -3.0f;
 
 	m_pFSM = cpuEngine.CreateFSM(this);
-	m_pFSM->SetGlobal<StateGlobal>();
-	m_pFSM->Add<StateIdle>();
-	m_pFSM->Add<StateBlink>();
+	m_pFSM->SetGlobal<StateShipGlobal>();
+	m_pFSM->Add<StateShipIdle>();
+	m_pFSM->Add<StateShipBlink>();
 }
 
 void Ship::Destroy()
@@ -288,16 +288,16 @@ void Ship::Update()
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void StateGlobal::OnEnter(Ship& cur, int from)
+void StateShipGlobal::OnEnter(Ship& cur, int from)
 {
 }
 
-void StateGlobal::OnExecute(Ship& cur)
+void StateShipGlobal::OnExecute(Ship& cur)
 {
 	cur.Update();
 }
 
-void StateGlobal::OnExit(Ship& cur, int to)
+void StateShipGlobal::OnExit(Ship& cur, int to)
 {
 }
 
@@ -305,21 +305,21 @@ void StateGlobal::OnExit(Ship& cur, int to)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void StateIdle::OnEnter(Ship& cur, int from)
+void StateShipIdle::OnEnter(Ship& cur, int from)
 {
 }
 
-void StateIdle::OnExecute(Ship& cur)
+void StateShipIdle::OnExecute(Ship& cur)
 {
 	// Blink every 3 seconds
 	if ( cur.GetFSM()->totalTime>3.0f )
 	{
-		cur.GetFSM()->ToState(CPU_ID(StateBlink));
+		cur.GetFSM()->ToState(CPU_ID(StateShipBlink));
 		return;
 	}
 }
 
-void StateIdle::OnExit(Ship& cur, int to)
+void StateShipIdle::OnExit(Ship& cur, int to)
 {
 }
 
@@ -327,11 +327,11 @@ void StateIdle::OnExit(Ship& cur, int to)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-void StateBlink::OnEnter(Ship& cur, int from)
+void StateShipBlink::OnEnter(Ship& cur, int from)
 {
 }
 
-void StateBlink::OnExecute(Ship& cur)
+void StateShipBlink::OnExecute(Ship& cur)
 {
 	float v = fmod(cur.GetFSM()->totalTime, 0.2f);
 	if ( v<0.1f )
@@ -345,11 +345,11 @@ void StateBlink::OnExecute(Ship& cur)
 
 	if ( cur.GetFSM()->totalTime>1.0f )
 	{
-		cur.GetFSM()->ToState(CPU_ID(StateIdle));
+		cur.GetFSM()->ToState(CPU_ID(StateShipIdle));
 		return;
 	}
 }
 
-void StateBlink::OnExit(Ship& cur, int to)
+void StateShipBlink::OnExit(Ship& cur, int to)
 {
 }
