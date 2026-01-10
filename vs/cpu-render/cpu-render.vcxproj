@@ -85,7 +85,7 @@
     <ClInclude Include="cpu_draw.h" />
     <ClInclude Include="cpu_font.h" />
     <ClInclude Include="cpu_frustum.h" />
-    <ClInclude Include="cpu_global_render.h" />
+    <ClInclude Include="cpu_global.h" />
     <ClInclude Include="cpu_light.h" />
     <ClInclude Include="cpu_material.h" />
     <ClInclude Include="cpu_particle_data.h" />
@@ -108,7 +108,7 @@
     <ClCompile Include="cpu_draw.cpp" />
     <ClCompile Include="cpu_font.cpp" />
     <ClCompile Include="cpu_frustum.cpp" />
-    <ClCompile Include="cpu_global_render.cpp" />
+    <ClCompile Include="cpu_global.cpp" />
     <ClCompile Include="cpu_light.cpp" />
     <ClCompile Include="cpu_material.cpp" />
     <ClCompile Include="cpu_particle_data.cpp" />

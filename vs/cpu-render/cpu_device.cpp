@@ -54,9 +54,9 @@ bool cpu_device::Create(cpu_window* pWindow, int width, int height)
 	// Surface
 #ifdef CPU_CONFIG_GPU
 	HRESULT hr = D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &m_pD2DFactory);
-	if ( hr==nullptr )
+	if ( hr!=S_OK )
 		return false;
-	FixDevice();
+	Fix();
 #else
 	m_bi.bmiHeader.biWidth = m_width;
 	m_bi.bmiHeader.biHeight = -m_height;
@@ -612,7 +612,7 @@ void cpu_device::Present()
 		m_pBitmap = nullptr;
 		m_pRenderTarget->Release();
 		m_pRenderTarget = nullptr;
-		FixDevice();
+		Fix();
 	}
 
 #else

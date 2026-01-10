@@ -92,7 +92,7 @@
     <ClInclude Include="cpu_vertex.h" />
     <ClInclude Include="cpu_function.h" />
     <ClInclude Include="cpu_vec3_cmp.h" />
-    <ClInclude Include="cpu_global_core.h" />
+    <ClInclude Include="cpu_global.h" />
     <ClInclude Include="cpu_img32.h" />
     <ClInclude Include="cpu_input.h" />
     <ClInclude Include="cpu_window.h" />
@@ -114,7 +114,7 @@
     <ClCompile Include="cpu_vertex.cpp" />
     <ClCompile Include="cpu_function.cpp" />
     <ClCompile Include="cpu_vec3_cmp.cpp" />
-    <ClCompile Include="cpu_global_core.cpp" />
+    <ClCompile Include="cpu_globalcpp" />
     <ClCompile Include="cpu_img32.cpp" />
     <ClCompile Include="cpu_input.cpp" />
     <ClCompile Include="cpu_window.cpp" />

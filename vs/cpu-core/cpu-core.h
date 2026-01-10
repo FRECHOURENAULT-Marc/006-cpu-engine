@@ -36,11 +36,6 @@
 // DirectX
 ////////////
 
-#ifdef CPU_CONFIG_GPU
-	#pragma comment(lib, "d2d1.lib")
-	#include <d2d1.h>
-#endif
-
 #include <DirectXMath.h>
 using namespace DirectX;
 inline XMVECTOR CPU_XMRIGHT				= g_XMIdentityR0;
@@ -56,9 +51,6 @@ inline XMVECTOR CPU_XMDIR				= g_XMIdentityR2;
 #undef max
 #undef DrawText
 #undef SetJob
-
-// Enable CPU_CONFIG_GPU for improved stretching when window size != render size or if you want to use V-Sync
-//#define CPU_CONFIG_GPU
 
 // Enable CPU_CONFIG_MT if you want to use Multi-Threading
 #ifdef _DEBUG
@@ -121,7 +113,7 @@ inline XMFLOAT3 CPU_ORANGE				= { 1.0f, 0.5f, 0.0f };
 // Core
 #include "cpu_png32.h"
 #include "cpu_img32.h"
-#include "cpu_global_core.h"
+#include "cpu_global.h"
 #include "cpu_atomic.h"
 #include "cpu_time.h"
 #include "cpu_input.h"

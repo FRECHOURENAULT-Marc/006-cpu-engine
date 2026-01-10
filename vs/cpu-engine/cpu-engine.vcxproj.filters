@@ -53,7 +53,7 @@
     <ClInclude Include="cpu_stats.h">
       <Filter>profiler</Filter>
     </ClInclude>
-    <ClInclude Include="cpu_global_engine.h">
+    <ClInclude Include="cpu_global.h">
       <Filter>main</Filter>
     </ClInclude>
   </ItemGroup>
@@ -88,7 +88,7 @@
     <ClCompile Include="cpu_stats.cpp">
       <Filter>profiler</Filter>
     </ClCompile>
-    <ClCompile Include="cpu_global_engine.cpp">
+    <ClCompile Include="cpu_global.cpp">
       <Filter>main</Filter>
     </ClCompile>
   </ItemGroup>

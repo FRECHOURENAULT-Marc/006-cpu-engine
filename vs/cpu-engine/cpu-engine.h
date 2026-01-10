@@ -42,7 +42,7 @@ class cpu_job;
 #define CPU_PASS_CURSOR_END				51
 
 // Engine
-#include "cpu_global_engine.h"
+#include "cpu_global.h"
 #include "cpu_manager.h"
 #include "cpu_fsm.h"
 #include "cpu_entity.h"

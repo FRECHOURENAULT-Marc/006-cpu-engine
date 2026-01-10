@@ -81,7 +81,7 @@
     <ClInclude Include="cpu_camera.h">
       <Filter>camera</Filter>
     </ClInclude>
-    <ClInclude Include="cpu_global_render.h">
+    <ClInclude Include="cpu_global.h">
       <Filter>main</Filter>
     </ClInclude>
     <ClInclude Include="cpu_light.h">
@@ -146,7 +146,7 @@
     <ClCompile Include="cpu_camera.cpp">
       <Filter>camera</Filter>
     </ClCompile>
-    <ClCompile Include="cpu_global_render.cpp">
+    <ClCompile Include="cpu_global.cpp">
       <Filter>main</Filter>
     </ClCompile>
     <ClCompile Include="cpu_light.cpp">

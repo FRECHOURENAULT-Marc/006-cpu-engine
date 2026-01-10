@@ -19,7 +19,7 @@
     <ClInclude Include="cpu-core.h">
       <Filter>main</Filter>
     </ClInclude>
-    <ClInclude Include="cpu_global_core.h">
+    <ClInclude Include="cpu_global.h">
       <Filter>main</Filter>
     </ClInclude>
     <ClInclude Include="pch.h">
@@ -84,7 +84,7 @@
     <ClCompile Include="pch.cpp">
       <Filter>main</Filter>
     </ClCompile>
-    <ClCompile Include="cpu_global_core.cpp">
+    <ClCompile Include="cpu_globalcpp">
       <Filter>main</Filter>
     </ClCompile>
     <ClCompile Include="cpu_thread.cpp">

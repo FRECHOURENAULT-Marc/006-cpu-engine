@@ -3,6 +3,17 @@
 // Sylvain Seccia
 // https://www.seccia.com
 
+// Enable CPU_CONFIG_GPU for improved stretching when window size != render size or if you want to use V-Sync
+#define CPU_CONFIG_GPU
+
+// DirectX
+////////////
+
+#ifdef CPU_CONFIG_GPU
+	#pragma comment(lib, "d2d1.lib")
+	#include <d2d1.h>
+#endif
+
 // Include
 #include "../cpu-core/cpu-core.h"
 
@@ -35,10 +46,8 @@ using CPU_PS_FUNC						= void(*)(cpu_ps_io& data);
 #define CPU_DEPTH_RW					4
 
 // Engine
-#include "cpu_global_render.h"
+#include "cpu_global.h"
 #include "cpu_tile.h"
-//#include "cpu_thread_job.h"
-//#include "cpu_job.h"
 #include "cpu_transform.h"
 #include "cpu_texture.h"
 #include "cpu_sprite.h"

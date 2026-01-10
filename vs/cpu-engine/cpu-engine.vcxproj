@@ -82,7 +82,7 @@
   <ItemGroup>
     <ClInclude Include="cpu-engine.h" />
     <ClInclude Include="cpu_callback.h" />
-    <ClInclude Include="cpu_global_engine.h" />
+    <ClInclude Include="cpu_global.h" />
     <ClInclude Include="cpu_hit.h" />
     <ClInclude Include="cpu_job.h" />
     <ClInclude Include="cpu_stats.h" />
@@ -95,7 +95,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="cpu_callback.cpp" />
-    <ClCompile Include="cpu_global_engine.cpp" />
+    <ClCompile Include="cpu_global.cpp" />
     <ClCompile Include="cpu_hit.cpp" />
     <ClCompile Include="cpu_job.cpp" />
     <ClCompile Include="cpu_stats.cpp" />
