@@ -1,5 +1,8 @@
 #include "pch.h"
 
+#include "Entity.h"
+#include "Server.h"
+
 App::App()
 {
 	s_pApp = this;
@@ -11,6 +14,13 @@ App::App()
 
 App::~App()
 {
+}
+
+Entity* App::CreateEntity()
+{
+	Entity* e = new Entity;
+	s_pApp->m_Entites.push_back(e);
+	return e;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -25,6 +35,10 @@ void App::OnStart()
 void App::OnUpdate()
 {
 	// YOUR CODE HERE
+
+	// Quit
+	if (cpuInput.IsKeyDown(VK_ESCAPE))
+		cpuEngine.Quit();
 }
 
 void App::OnExit()
@@ -41,4 +55,63 @@ void App::MyPixelShader(cpu_ps_io& io)
 {
 	// YOUR CODE HERE
 	io.color = io.p.color;
+}
+
+
+/////////////////////
+/// SERVER APP
+/////////////////////
+
+ServerApp::~ServerApp()
+{
+}
+
+void ServerApp::OnStart()
+{
+	m_Entites.push_back(new Entity);
+	cpuEngine.GetCamera()->transform.pos.z = -5.0f;
+}
+
+void ServerApp::OnUpdate()
+{
+	// YOUR CODE HERE
+}
+
+void ServerApp::OnExit()
+{
+	// YOUR CODE HERE
+}
+
+void ServerApp::OnRender(int pass)
+{
+	// YOUR CODE HERE
+}
+
+/////////////////////
+/// CLIENT APP
+/////////////////////
+
+ClientApp::~ClientApp()
+{
+}
+
+void ClientApp::OnStart()
+{
+	//m_Entites.push_back(new Entity);
+	cpuEngine.GetCamera()->transform.pos.z = -5.0f;
+}
+
+void ClientApp::OnUpdate()
+{
+	// YOUR CODE HERE
+}
+
+void ClientApp::OnExit()
+{
+	// YOUR CODE HERE
+}
+
+void ClientApp::OnRender(int pass)
+{
+	// YOUR CODE HERE
 }
