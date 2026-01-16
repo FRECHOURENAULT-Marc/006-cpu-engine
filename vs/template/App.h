@@ -11,6 +11,7 @@ public:
 	static App& GetInstance() { return *s_pApp; }
 
 	static Entity* CreateEntity();
+	static std::vector<Entity*>& GetEntities();
 
 	virtual void OnStart();
 	virtual void OnUpdate();

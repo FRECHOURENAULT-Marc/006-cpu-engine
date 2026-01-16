@@ -2,6 +2,7 @@
 #include "Client.h"
 
 #include "utils.h"
+#include "Entity.h"
 
 void Client::ResetInputsBuffer()
 {
@@ -47,9 +48,28 @@ bool Client::Receive(char* recvBuffer) {
 	return true;
 }
 
+DWORD WINAPI ReceiveClientLoop(_In_ LPVOID lpParameter)
+{
+	Client* c = (Client*)lpParameter;
+	c->UpdateClientGame();
+	return 0;
+}
+DWORD WINAPI SendClientLoop(_In_ LPVOID lpParameter)
+{
+	Client* c = (Client*)lpParameter;
+	c->UpdateInputs();
+	return 0;
+}
+
 void Client::UpdateClient()
 {
+	HANDLE receiveThread = CreateThread(NULL, 0, ReceiveClientLoop, this, 0, 0);
 
+	WaitForSingleObject(receiveThread, 1000);
+
+	HANDLE sendThread = CreateThread(NULL, 0, SendClientLoop, this, 0, 0);
+
+	WaitForSingleObject(sendThread, INFINITE);
 }
 
 void Client::UpdateInputs()
@@ -58,16 +78,16 @@ void Client::UpdateInputs()
 	ResetInputsBuffer();
 	while (true) {
 
-		if (cpuInput.IsKeyDown('Z')) {
+		if (cpuInput.IsKey('Z')) {
 			inputs.append("z");
 		}
-		if (cpuInput.IsKeyDown('S')) {
+		if (cpuInput.IsKey('S')) {
 			inputs.append("s");
 		}
-		if (cpuInput.IsKeyDown('D')) {
+		if (cpuInput.IsKey('D')) {
 			inputs.append("d");
 		}
-		if (cpuInput.IsKeyDown('Q')) {
+		if (cpuInput.IsKey('Q')) {
 			inputs.append("q");
 		}
 		if (inputs.size() > 11) {
@@ -79,4 +99,38 @@ void Client::UpdateInputs()
 
 void Client::UpdateClientGame()
 {
+	while (true) {
+		char buffer[BUF_LEN_DEFAULT] = "";
+		Receive(buffer);
+
+		utils::PrintData(buffer);
+
+		int eNb = 0;
+		utils::Deserialize<int>(buffer, "eNb", &eNb);
+
+		auto& entities = App::GetEntities();
+		if (entities.size() < eNb) {
+			int diff = eNb - entities.size();
+			for (int i = 0; i < diff; i++) {
+				entities.push_back(new Entity);
+			}
+		}
+
+		for (int i = 0; i < eNb; i++) {
+
+			std::string varNameX = "e" + std::to_string(i) + "X";
+			std::string varNameY = "e" + std::to_string(i) + "Y";
+			std::string varNameZ = "e" + std::to_string(i) + "Z";
+			float x, y, z;
+			utils::Deserialize<float>(buffer, varNameX, &x);
+			utils::Deserialize<float>(buffer, varNameY, &y);
+			utils::Deserialize<float>(buffer, varNameZ, &z);
+			XMFLOAT3 pos = { x, y, z };
+
+			utils::PrintData(pos.z);
+
+			Entity* e = entities[i];
+			e->SetPos(pos);
+		}
+	}
 }

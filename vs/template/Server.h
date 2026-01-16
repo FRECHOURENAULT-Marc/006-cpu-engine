@@ -29,5 +29,7 @@ public:
 	void InterpretData(char* buffer, sockaddr_in& addr);
 
 	void Listen();
+
+	friend class App;
 };
 

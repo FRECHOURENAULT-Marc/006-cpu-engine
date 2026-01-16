@@ -34,7 +34,6 @@ DWORD WINAPI ClientAppLoop(_In_ LPVOID lpParameter)
 DWORD WINAPI ClientLoop(_In_ LPVOID lpParameter)
 {
 	Client c("10.10.137.46");
-	Sleep(1000);
 	c.Send("t:cre name:... ");
 	c.UpdateClient();
 	return 0;
@@ -56,7 +55,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int cmdShow)
 
 		WaitForSingleObject(gameThread, INFINITE);
 	}
-	else if (choice == 'c') {
+	if (choice == 'c') {
 		HANDLE gameThread = CreateThread(NULL, 0, ClientAppLoop, nullptr, 0, 0);
 
 		WaitForSingleObject(gameThread, 1000);

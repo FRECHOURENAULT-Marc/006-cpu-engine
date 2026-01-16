@@ -22,4 +22,4 @@
 #define BUF_DATA_NAME "name"
 #define BUF_DATA_KEY "key"
 
-#define ENTITY_SPEED 1.0f
+#define ENTITY_SPEED 0.25f

@@ -157,13 +157,31 @@ DWORD WINAPI dataSendLoop(_In_ LPVOID lpParameter)
 {
 	Server* serv = (Server*)lpParameter;
 
-	//TO DO
 	while (true) {
 		auto& clients = serv->GetClients();
-		Sleep(500);
+		auto& entities = App::GetEntities();
+
+		//Sleep(500);
+
+		std::string buffer = "t:upd ";
+		buffer.append(" eNb:" + std::to_string(entities.size()) + " ");
+
+		for (int i = 0; i < entities.size(); i++) {
+			Entity* e = entities[i];
+			XMFLOAT3 pos = e->GetPos();
+
+			buffer.append("e" + std::to_string(i) + "X:");
+			buffer.append(std::to_string(pos.x) + " ");
+			buffer.append("e" + std::to_string(i) + "Y:");
+			buffer.append(std::to_string(pos.y) + " ");
+			buffer.append("e" + std::to_string(i) + "Z:");
+			buffer.append(std::to_string(pos.z) + " ");
+
+		}
 
 		for (ClientData* cData : clients) {
-			cData->addr;
+			sockaddr* addr = (sockaddr*)cData->addr;
+			serv->SendTo(buffer.c_str(), addr);
 		}
 	}
 

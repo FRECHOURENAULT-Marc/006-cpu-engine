@@ -13,6 +13,10 @@ public:
 	Entity();
 	~Entity();
 
+	XMFLOAT3 GetPos() { return m_pEntity->transform.pos; }
+
+	void SetPos(XMFLOAT3 pos);
+
 	void Move(int dirX, int dirY, int dirZ);
 
 	void Update();
