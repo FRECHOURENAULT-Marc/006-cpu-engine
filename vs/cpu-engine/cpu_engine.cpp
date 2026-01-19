@@ -143,10 +143,8 @@ void cpu_engine::Run()
 		Render();
 	}
 
-	// Managers
-	Update_Purge();
-
 	// End
+	Update_Purge();
 	m_callback.onExit.Call();
 
 	// Threads
@@ -160,6 +158,7 @@ void cpu_engine::Run()
 	m_particleRenderJobs.clear();
 
 	// Managers
+	Update_Purge();
 	ClearManagers();
 }
 

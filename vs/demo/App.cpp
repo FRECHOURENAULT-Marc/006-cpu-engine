@@ -52,9 +52,6 @@ void App::OnStart()
 {
 	// YOUR CODE HERE
 
-	// Disable rendering
-	//cpuEngine.EnableRender(false);
-
 	// Resources
 	m_font.Create(12);
 	m_texture.Load("bird_amiga.png");
@@ -169,6 +166,8 @@ void App::OnExit()
 {
 	// YOUR CODE HERE
 
+	if ( m_pShip )
+		m_pShip->Destroy();
 	CPU_DELPTR(m_pShip);
 	m_missiles.clear();
 }
