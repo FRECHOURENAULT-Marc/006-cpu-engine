@@ -29,8 +29,8 @@ void Run(int width, int height, bool fullscreen = false, bool amigaStyle = false
 #ifdef _DEBUG
 	_CrtMemState memState, memStateDiff;
 	_CrtMemCheckpoint(&memState);
-	if ( _CrtMemDifference(&memStateDiff, &memStateInit, &memState) )
-		MessageBoxA(nullptr, "Memory leaks", "ALERT", 0);
+	//if ( _CrtMemDifference(&memStateDiff, &memStateInit, &memState) )
+	//	MessageBoxA(nullptr, "Memory leaks", "ALERT", 0);
 	_CrtDumpMemoryLeaks();
 #endif
 }

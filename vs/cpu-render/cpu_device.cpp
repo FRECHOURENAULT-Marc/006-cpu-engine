@@ -225,8 +225,22 @@ void cpu_device::ClearDepth()
 	std::fill(rt.depthBuffer.begin(), rt.depthBuffer.end(), 1.0f);
 }
 
+bool IsValidMatrix(const XMFLOAT4X4& m)
+{
+	const float* f = &m._11;
+	for (int i = 0; i < 16; ++i)
+	{
+		if (!std::isfinite(f[i]))
+			return false;
+	}
+	return true;
+}
+
 void cpu_device::ClearSky(XMFLOAT3& groundColor, XMFLOAT3& skyColor)
 {
+	if (IsValidMatrix(m_pCamera->matView) == false)
+		return;
+
 	cpu_rt& rt = *GetRT();
 
 	ui32 gCol = cpu::ToBGR(groundColor);
