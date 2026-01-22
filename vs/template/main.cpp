@@ -48,7 +48,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int cmdShow)
 	char choice = _getch();
 	if (choice == 's') {
 		HANDLE gameThread = CreateThread(NULL, 0, ServerAppLoop, nullptr, 0, 0);
-
 		WaitForSingleObject(gameThread, 1000);
 
 		HANDLE serverThread = CreateThread(NULL, 0, ServerLoop, nullptr, 0, 0);
@@ -57,7 +56,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE, LPSTR, int cmdShow)
 	}
 	if (choice == 'c') {
 		HANDLE gameThread = CreateThread(NULL, 0, ClientAppLoop, nullptr, 0, 0);
-
 		WaitForSingleObject(gameThread, 1000);
 
 		HANDLE clientThread = CreateThread(NULL, 0, ClientLoop, nullptr, 0, 0);

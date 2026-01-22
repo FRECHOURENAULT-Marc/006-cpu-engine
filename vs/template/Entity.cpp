@@ -41,8 +41,4 @@ void Entity::Move(int x, int y, int z)
 void Entity::Update() 
 {
 	float dt = cpuTime.delta;
-	//m_pEntity->transform.dir.x = 1;
-	//m_pEntity->transform.dir.y = 0;
-	//m_pEntity->transform.dir.z = 1;
-	//m_pEntity->transform.Move(dt);
 }

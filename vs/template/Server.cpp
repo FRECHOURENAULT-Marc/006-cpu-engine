@@ -50,11 +50,11 @@ auto& Server::GetClients()
 
 ClientData* Server::GetClient(sockaddr_in& clientAddr)
 {
-	std::string clientAddrStr = utils::GetAddressStr(clientAddr);
+	std::string clientAddrStr = utils::GetIP(clientAddr);
 
 	for (ClientData* actualClient : m_clients) {
 		sockaddr_in actualAddr = *actualClient->addr;
-		std::string actualAddrStr = utils::GetAddressStr(actualAddr);
+		std::string actualAddrStr = utils::GetIP(actualAddr);
 		if (actualAddrStr != clientAddrStr)
 			continue;
 
@@ -66,11 +66,11 @@ ClientData* Server::GetClient(sockaddr_in& clientAddr)
 
 bool Server::ClientExist(sockaddr_in& clientAddr)
 {
-	std::string clientAddrStr = utils::GetAddressStr(clientAddr);
+	std::string clientAddrStr = utils::GetIP(clientAddr);
 
 	for (ClientData* actualClient : m_clients) {
 		sockaddr_in actualAddr = *actualClient->addr;
-		std::string actualAddrStr = utils::GetAddressStr(actualAddr);
+		std::string actualAddrStr = utils::GetIP(actualAddr);
 		if (actualAddrStr != clientAddrStr)
 			continue;
 
@@ -103,11 +103,8 @@ bool Server::ReceiveFrom(char* recvBuffer, sockaddr* addrFrom)
 
 void Server::InterpretData(char* buffer, sockaddr_in& addr)
 {
-	//t:cre name:... 
-	//t:upd key:zddq
-
-	bool isCreation = utils::StrContain(buffer, BUF_TYPE_CREATION);
-	bool isUpdate = utils::StrContain(buffer, BUF_TYPE_UPDATE);
+	bool isCreation = utils::IsStrContain(buffer, BUF_TYPE_CREATION);
+	bool isUpdate = utils::IsStrContain(buffer, BUF_TYPE_UPDATE);
 
 	if (isCreation) {
 
@@ -202,7 +199,7 @@ DWORD WINAPI dataReceiveLoop(_In_ LPVOID lpParameter)
 
 		utils::PrintMSG(
 			"Message receive (from client " 
-			+ utils::GetAddressStr(clientAddr) + ", ID " 
+			+ utils::GetIP(clientAddr) + ", ID " 
 			+ std::to_string(clients.size() - 1) + ")");
 		utils::PrintData(recvBuffer);
 

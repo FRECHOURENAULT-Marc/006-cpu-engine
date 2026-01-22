@@ -61,14 +61,14 @@ namespace utils {
 		return ID::GetID();
 	}
 
-	std::string GetAddressStr(sockaddr_in& addr) {
+	std::string GetIP(sockaddr_in& addr) {
 		char buff[INET6_ADDRSTRLEN] = { 0 };
 		return inet_ntop(addr.sin_family, (void*)&(addr.sin_addr), buff, INET6_ADDRSTRLEN);
 	}
 
-	bool StrContain(std::string toAnalyze, std::string word)
+	bool IsStrContain(std::string toAnalyze, std::string wordToFind)
 	{
-		if (toAnalyze.empty() || word.empty())
+		if (toAnalyze.empty() || wordToFind.empty())
 			return false;
 
 		int actualIndex = 0;
@@ -77,15 +77,15 @@ namespace utils {
 
 			char c = toAnalyze[i];
 
-			if (actualIndex >= word.size())
+			if (actualIndex >= wordToFind.size())
 				return true;
 
-			if (actualIndex == 0 && word[0] == c) {
+			if (actualIndex == 0 && wordToFind[0] == c) {
 				actualIndex++;
 				lastIndex = i;
 				continue;
 			}
-			if (word[actualIndex] == c && lastIndex == i - 1) {
+			if (wordToFind[actualIndex] == c && lastIndex == i - 1) {
 				actualIndex++;
 				lastIndex = i;
 				continue;
@@ -94,7 +94,7 @@ namespace utils {
 			lastIndex = 0;
 		}
 
-		if (actualIndex >= word.size())
+		if (actualIndex >= wordToFind.size())
 			return true;
 
 		return false;
@@ -108,7 +108,6 @@ ID::ID()
 		IDs[i] = i;
 	}
 }
-
 int ID::GetID()
 {
 	int res = instance->IDs[instance->lastID];

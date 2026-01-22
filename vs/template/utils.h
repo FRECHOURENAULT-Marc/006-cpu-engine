@@ -46,9 +46,9 @@ namespace utils {
 
 	int GetId();
 
-	std::string GetAddressStr(sockaddr_in& addr);
+	std::string GetIP(sockaddr_in& addr);
 
-	bool StrContain(std::string toAnalyze, std::string word);
+	bool IsStrContain(std::string toAnalyze, std::string wordToFind);
 
 	template <typename T>
 	inline void Deserialize(std::string data, std::string varName, T* var) {
